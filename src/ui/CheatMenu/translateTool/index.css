@@ -1,0 +1,78 @@
+/* ReadingStatus.css */
+
+/* 卡片样式 */
+.reading-card {
+  width: 50%;               /* 占父容器的一半 */
+  margin: 20px 0;     
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+}
+
+/* 主容器 */
+.reading-container {
+  display: flex;
+  flex-direction: column;
+  /* align-items: center; */
+  gap: 16px;
+}
+
+/* 顶部标题行：图标 + 文本 */
+.reading-header {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333; /* 默认文字色 */
+  line-height: 1;
+}
+
+.reading-header .anticon {
+  margin-right: 8px;
+}
+
+/* ✅ 完成态：绿色 */
+.reading-header.done-header {
+  color: #52c41a; /* antd 成功绿 */
+}
+
+/* ❌ 错误态：红色 */
+.reading-header.error-header {
+  color: #ff4d4f; /* antd 错误红 */
+}
+
+/* 进度区域 */
+.reading-progress {
+  width: 100%;
+  text-align: center;
+}
+
+.reading-progress p {
+  margin: 4px 0 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* 让 antd 进度条更圆润 */
+.reading-progress .ant-progress-inner {
+  border-radius: 8px;
+}
+
+.reading-progress .ant-progress-bg {
+  border-radius: 8px;
+}
+
+/* 小屏适配 */
+@media (max-width: 480px) {
+  .reading-card {
+    width: 90%;   /* 小屏时几乎全宽 */
+    margin: 12px auto;
+    padding: 16px;
+  }
+  .reading-container {
+    gap: 12px;
+  }
+  .reading-header {
+    font-size: 15px;
+  }
+}

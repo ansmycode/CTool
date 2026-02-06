@@ -17,6 +17,7 @@ html, body, #root {
   border: 2px dashed #1890ff;
   background: #fafafa;
   padding: 40px;
+  margin: 12px 3rem;
   text-align: center;
   border-radius: 8px;
   color: #1890ff;
@@ -27,4 +28,17 @@ html, body, #root {
 
 .drop-zone:hover {
   background: #e6f7ff;
+}
+
+.tool-cheatmenu{
+  padding: 8px 1rem
+}
+
+.tool-main{
+  padding: 5px 1rem
+}
+
+.tab-main{
+  width: 200px; 
+  text-align: center;
 }

@@ -21,7 +21,12 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    "baseUrl": ".", // 必须加，表示相对项目根目录
+    "paths": {
+      "@/*": ["src/*"] // 定义 @ 指向 src 目录
+    }
   },
-  "include": ["src"],
+  "include": ["src"]
 }
