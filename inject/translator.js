@@ -1,256 +1,354 @@
 (function () {
-  // ===============================
-  //        翻译管理器核心
-  // ===============================
-  const TranslationManager = {
-    _dict: {}, //原始字典
-    _flatDict: {}, //工作字典
-    _cache: new Map(), //缓存
-    _buckets: new Map(), //分桶
-    _ready: false, //翻译功能是否初始化成功
+  //#region TranslationManager
+  function TranslationManager() {
+    throw new Error('This is a static class');
+  }
 
-    initialize() {
-      try {
-        const raw = localStorage.getItem("translationDict");
-        if (!raw) {
-          console.warn("[Translator] 未找到 translationDict，本地无翻译字典。");
-          return;
-        }
+  TranslationManager._dict = null;
+  TranslationManager._translatedSet = new Set();
+  TranslationManager._lengthKeyDict = null;
 
-        const parsed = JSON.parse(raw);
-        this._flatDict = this.flatten(parsed);
+  TranslationManager._dictPath = null;
+  TranslationManager._isDictChanged = false;
 
-        // 构建长度分桶
-        for (const [key, val] of Object.entries(this._flatDict)) {
-          const len = key.length;
-          if (!this._buckets.has(len)) this._buckets.set(len, []);
-          this._buckets.get(len).push({ k: key, v: val });
-        }
-
-        this._ready = true;
-        console.log(
-          `[Translator] 翻译字典加载完成，共 ${
-            Object.keys(this._flatDict).length
-          } 条。`
-        );
-      } catch (e) {
-        console.error("[Translator] 翻译字典初始化失败：", e);
-      }
-    },
-
-    flatten(dict) {
-      const flat = {};
-      for (const k in dict) {
-        const v = dict[k];
-        if (k.includes("\n")) {
-          const kl = k.split("\n");
-          const vl = String(v).split("\n");
-          for (let i = 0; i < kl.length; i++) {
-            const key = kl[i].trim();
-            if (key) flat[key] = vl[i] || "";
-          }
-        } else flat[k] = v;
-      }
-      return flat;
-    },
-
-    translate(rawText) {
-      if (!this._ready || !rawText || typeof rawText !== "string")
-        return rawText;
-
-      // 缓存命中
-      if (this._cache.has(rawText)) return this._cache.get(rawText);
-
-      const dict = this._flatDict;
-      const text = rawText.trim();
-
-      // 完全匹配
-      if (dict[text]) {
-        this._cache.set(rawText, dict[text]);
-        return dict[text];
-      }
-
-      // 分桶模糊匹配
-      let translated = text;
-      const length = text.length;
-      for (let offset = 0; offset <= 3; offset++) {
-        const bucket =
-          this._buckets.get(length - offset) ||
-          this._buckets.get(length + offset);
-        if (!bucket) continue;
-        for (const { k, v } of bucket) {
-          if (text.includes(k)) translated = text.replace(k, v);
-        }
-      }
-
-      this._cache.set(rawText, translated);
-      return translated;
-    },
-
-    buildBuckets(dict) {
-      const buckets = {};
-      for (const key of Object.keys(dict)) {
-        const len = key.length;
-        if (!buckets[len]) buckets[len] = [];
-        buckets[len].push(key);
-      }
-      return buckets;
-    },
-
-    reload() {
-      this.initialize();
-    },
+  TranslationManager.isInitialized = function () {
+    return this._dict !== null;
   };
 
-  // 初始化字典
-  TranslationManager.initialize();
+  TranslationManager.initialize = function (dictionary) {
+    this._dict = dictionary;
+    this._translatedSet = new Set(Object.values(dictionary));
+    this._translatedSet.add(""); // Ensure empty string is included
+    this._dict[""] = ""; // Ensure empty string maps to itself
 
-  // ===============================
-  //        静态数据翻译
-  // ===============================
-  const dict = TranslationManager._flatDict;
-
-  function translate(str) {
-    if (!str || typeof str !== "string") return str;
-    return TranslationManager.translate(str);
-  }
-
-  function translateDataGroup(group, fields) {
-    if (!group) return;
-    for (const obj of group) {
-      if (!obj) continue;
-      for (const key of fields) {
-        if (obj[key]) obj[key] = translate(obj[key]);
-      }
-    }
-  }
-
-  function translateSystemData() {
-    const sys = $dataSystem;
-    if (!sys) return;
-    sys.gameTitle = translate(sys.gameTitle);
-
-    if (sys.terms) {
-      const terms = sys.terms;
-      for (const section of ["basic", "commands", "params"]) {
-        if (Array.isArray(terms[section])) {
-          terms[section] = terms[section].map((txt) => translate(txt));
+    // use linebreaks to split text (Only if both key and value have same number of lines)
+    for (let key in this._dict) {
+      if (key.includes('\n')) {
+        const value = this._dict[key];
+        const keyLines = key.split('\n');
+        const valueLines = value.split('\n');
+        if (keyLines.length === valueLines.length) {
+          for (let i = 0; i < keyLines.length; i++) {
+            if (keyLines[i] && valueLines[i]) {
+              if (keyLines[i].length <= 3) continue; // Skip very short lines
+              this._dict[keyLines[i]] = valueLines[i];
+              this._translatedSet.add(valueLines[i]);
+            }
+          }
         }
       }
-      for (const key in terms.messages) {
-        terms.messages[key] = translate(terms.messages[key]);
+    }
+
+    // Store keys by length for efficient partial matching
+    this._lengthKeyDict = Object.keys(dictionary).reduce((acc, key) => {
+      const length = key.length;
+      if (!acc[length]) {
+        acc[length] = [];
+      }
+      acc[length].push(key);
+      return acc;
+    }, {});
+  };
+
+  TranslationManager.translate = function (text, detectStartWhitespace = true, times = Number.POSITIVE_INFINITY, cache = true) {
+    if (typeof text !== 'string' || !this._dict || this._translatedSet.has(text)) {
+      return text;
+    }
+
+    // If text can be directly translated, do it
+    if (this._dict[text]) {
+      return this._dict[text];
+    }
+
+    // If has linebreaks, translate each line separately
+    if (text.includes('\n')) {
+      const lines = text.split('\n');
+      const translatedLines = lines.map(line => this.translate(line, detectStartWhitespace, times));
+      return translatedLines.join('\n');
+    } else {
+      if (detectStartWhitespace) {
+        const match = text.match(/^\s+/);
+        leadingSpaces = match ? match[0] : '';
+        text = text.slice(leadingSpaces.length);
+      }
+      if (this._dict[text]) {
+        return detectStartWhitespace ? leadingSpaces + this._dict[text] : this._dict[text];
+      }
+      // If not in the dictionary, try to find partial matches
+      let translatedText = text;
+      if (this._dict && this._lengthKeyDict) {
+        let count = 0;
+        const textLength = text.length;
+        const lenSorted = Object.keys(this._lengthKeyDict)
+          .map(l => parseInt(l, 10))
+          .filter(l => l < textLength)
+          .sort((a, b) => b - a); // Descending order
+
+        // Go through all possible length buckets
+        outer: for (let len of lenSorted) {
+          for (let key of this._lengthKeyDict[len]) {
+            if (translatedText.includes(key)) {
+              translatedText = translatedText.replace(key, this._dict[key]);
+              count++;
+              if (count >= times) {
+                break outer;
+              }
+            }
+          }
+        }
+
+        if (cache && translatedText !== text) {
+          // Cache the new translation
+          this._dict[text] = translatedText;
+          if (!this._lengthKeyDict[text.length]) {
+            this._lengthKeyDict[text.length] = [];
+          }
+          this._lengthKeyDict[text.length].push(text);
+          // this._isDictChanged = true;
+        }
+
+        // No matter what, add to translated set to avoid re-processing
+        this._translatedSet.add(translatedText);
+
+        translatedText = detectStartWhitespace ? leadingSpaces + translatedText : translatedText;
+      }
+      return translatedText;
+    }
+  };
+
+  // Async-style callback, but runs synchronously
+  TranslationManager.translateIfNeed = function (text, callback) {
+    const result = TranslationManager.translate(text);
+    if (typeof callback === 'function') {
+      callback(result);
+    }
+    return result;
+  };
+
+  // Returns a Promise that resolves with the translated text
+  TranslationManager.getTranslatePromise = function (text) {
+    return new Promise((resolve) => {
+      const result = TranslationManager.translate(text);
+      resolve(result);
+    });
+  };
+
+
+  TranslationManager.translateEventCommandComment = function (command) {
+    if (command.code === 108) {
+      command.parameters[0] = TranslationManager.translate(command.parameters[0], detectStartWhitespace = false, times = 1);
+    }
+  };
+
+
+  TranslationManager.translateDataMap = function () {
+    if ($dataMap) {
+      if ($dataMap.displayName) {
+        $dataMap.displayName = TranslationManager.translate($dataMap.displayName);
+      }
+
+    }
+  };
+
+  TranslationManager.translateCommonData = function () {
+    // Translate map names in $dataMapInfos
+    if ($dataMapInfos) {
+      $dataMapInfos.forEach(mapInfo => {
+        if (mapInfo && mapInfo.name) {
+          mapInfo.name = TranslationManager.translate(mapInfo.name);
+        }
+      });
+    }
+
+    // Translate Actors' names and profiles
+    if ($dataActors) {
+      $dataActors.forEach(actor => {
+        if (!actor) return;
+        if (actor.name) actor.name = TranslationManager.translate(actor.name);
+        if (actor.profile) actor.profile = TranslationManager.translate(actor.profile);
+        if (actor.nickname) actor.nickname = TranslationManager.translate(actor.nickname);
+        if (actor.note) actor.note = TranslationManager.translate(actor.note, times = 1);
+      });
+    }
+
+    // Translate Items, Skills, Weapons, Armors, States
+    const dataArrays = [$dataItems, $dataSkills, $dataWeapons, $dataArmors, $dataStates];
+    dataArrays.forEach(data => {
+      if (data) {
+        data.forEach(item => {
+          if (!item) return;
+          if (item.name) item.name = TranslationManager.translate(item.name);
+          if (item.description) item.description = TranslationManager.translate(item.description);
+          if (item.note) item.note = TranslationManager.translate(item.note, times = 1);
+        });
+      }
+    });
+
+    // Translate Enemies
+    if ($dataEnemies) {
+      $dataEnemies.forEach(enemy => {
+        if (!enemy) return;
+        if (enemy.name) enemy.name = TranslationManager.translate(enemy.name);
+        if (enemy.note) enemy.note = TranslationManager.translate(enemy.note, times = 1);
+      });
+    }
+
+    if ($dataSystem) {
+      // Translate the System terms and messages
+      if ($dataSystem.terms) {
+        if ($dataSystem.terms.basic) {
+          $dataSystem.terms.basic.forEach((term, i) => {
+            $dataSystem.terms.basic[i] = TranslationManager.translate(term);
+          });
+        }
+        if ($dataSystem.terms.commands) {
+          $dataSystem.terms.commands.forEach((term, i) => {
+            $dataSystem.terms.commands[i] = TranslationManager.translate(term);
+          });
+        }
+        if ($dataSystem.terms.params) {
+          $dataSystem.terms.params.forEach((term, i) => {
+            $dataSystem.terms.params[i] = TranslationManager.translate(term);
+          });
+        }
+        if ($dataSystem.terms.messages) {
+          for (let key in $dataSystem.terms.messages) {
+            $dataSystem.terms.messages[key] = TranslationManager.translate($dataSystem.terms.messages[key]);
+          }
+        }
+      }
+
+      // Also variable and switch names
+      if ($dataSystem.variables) {
+        $dataSystem.variables.forEach((variable, i) => {
+          if (variable) {
+            $dataSystem.variables[i] = TranslationManager.translate(variable);
+          }
+        });
+      }
+      if ($dataSystem.switches) {
+        $dataSystem.switches.forEach((sw, i) => {
+          if (sw) {
+            $dataSystem.switches[i] = TranslationManager.translate(sw);
+          }
+        }
+        );
+      }
+
+      // Translate game title
+      if ($dataSystem.gameTitle) {
+        $dataSystem.gameTitle = TranslationManager.translate($dataSystem.gameTitle);
       }
     }
-  }
 
-  function translateMapInfos() {
-    if (!$dataMapInfos) return;
-    for (const map of $dataMapInfos) {
-      if (map && map.name) map.name = translate(map.name);
+
+  };
+  //#endregion
+
+  //#region Plugin
+  function patchPlugin() {
+    // TextResource (RPG Maker MZ)
+    if (typeof TextResource !== 'undefined' && TextResource.getText) {
+      const _TextResource_getText = TextResource.getText;
+      TextResource.getText = function (label) {
+        const text = _TextResource_getText.call(this, label);
+        return TranslationManager.translate(text);
+      };
     }
-  }
+  };
+  //#endregion
 
+  //#region Initialization
+  // --- Core Logic: Load the Translation Dictionary ---
+  // This function is aliased to load our custom data before the game starts.
+  const _DataManager_loadDatabase = DataManager.loadDatabase;
+  DataManager.loadDatabase = function () {
+    _DataManager_loadDatabase.call(this);
+    let dict = null;
+    //从 localStorage 读取
+    try {
+      const raw = localStorage.getItem('translationDict');
+      if (raw) {
+        dict = JSON.parse(raw);
+        console.log('[TM] Translation loaded from localStorage');
+      }
+    } catch (e) {
+      console.warn('[TM] Failed to parse localStorage translationDict', e);
+    }
+
+    if (dict) {
+      TranslationManager.initialize(dict);
+    }
+  };
+
+  // Patch DataManager.onLoad to run translation after all database files are loaded
   const _DataManager_onLoad = DataManager.onLoad;
+  DataManager._translationApplied = false;
   DataManager.onLoad = function (object) {
     _DataManager_onLoad.call(this, object);
+    if (DataManager.isDatabaseLoaded() && !DataManager._translationApplied && TranslationManager.isInitialized()) {
+      TranslationManager.translateCommonData();
+      patchPlugin();
+      DataManager._translationApplied = true;
+    }
 
-    if (DataManager.isDatabaseLoaded() && !window._staticTranslationApplied) {
-      window._staticTranslationApplied = true;
+    // Translate map data when it's loaded
+    if (object === $dataMap && TranslationManager.isInitialized()) {
+      TranslationManager.translateDataMap();
+    }
 
-      translateDataGroup($dataActors, ["name", "profile"]);
-      translateDataGroup($dataItems, ["name", "description"]);
-      translateDataGroup($dataWeapons, ["name", "description"]);
-      translateDataGroup($dataArmors, ["name", "description"]);
-      translateDataGroup($dataSkills, ["name", "description"]);
-      translateDataGroup($dataStates, ["name", "message1", "message2"]);
+    // TranslationManager.saveDictionary();
+  };
 
-      translateSystemData();
-      translateMapInfos();
+  window.TranslationManager = TranslationManager;
+  //#endregion
 
-      if ($dataMap && $dataMap.displayName) {
-        $dataMap.displayName = translate($dataMap.displayName);
-      }
+  //#region Patches
+  // Choices and other command window text
+  const _Window_Command_addCommand = Window_Command.prototype.addCommand;
+  Window_Command.prototype.addCommand = function (name, symbol, enabled = true, ext = null) {
+    _Window_Command_addCommand.call(this, TranslationManager.translate(name), symbol, enabled, ext);
+  };
 
-      console.log("[Translator] 静态数据翻译已完成。");
+  // Message window text
+  const _Window_Message_startMessage = Window_Message.prototype.startMessage;
+  Window_Message.prototype.startMessage = function () {
+    for (let i = 0; i < $gameMessage._texts.length; i++) {
+      $gameMessage._texts[i] = TranslationManager.translate($gameMessage._texts[i]);
+    }
+    _Window_Message_startMessage.call(this);
+  };
+
+  // Battle log text ??
+  const _Window_BattleLog_addText = Window_BattleLog.prototype.addText;
+  Window_BattleLog.prototype.addText = function (text) {
+    _Window_BattleLog_addText.call(this, TranslationManager.translate(text));
+  };
+
+  // Thanks to the improvement in translate function, this is be acceptable now.
+  // Window_Base.drawText is implemented in terms of Bitmap.drawText, so patching Bitmap.drawText should cover most cases.
+  const _Bitmap_drawText = Bitmap.prototype.drawText;
+  Bitmap.prototype.drawText = function (text, x, y, maxWidth, lineHeight, align) {
+    if (text) {
+      return _Bitmap_drawText.call(this, TranslationManager.translate(text), x, y, maxWidth, lineHeight, align);
+    } else {
+      return _Bitmap_drawText.call(this, text, x, y, maxWidth, lineHeight, align);
     }
   };
 
-  // ===============================
-  //        控制符保护机制
-  // ===============================
-  const CODE_RE = /(\\[A-Za-z]+\[[^\]]*\]|\\[\{\}^.!|><]|\\n)/g;
+  const _Bitmap_measureTextWidth = Bitmap.prototype.measureTextWidth;
+  Bitmap.prototype.measureTextWidth = function (text) {
+    if (text) {
+      return _Bitmap_measureTextWidth.call(this, TranslationManager.translate(text));
+    } else {
+      return _Bitmap_measureTextWidth.call(this, text);
+    }
+  };
 
-  function protectControlCodes(text) {
-    const codes = [];
-    const protectedText = text.replace(CODE_RE, (match) => {
-      codes.push(match);
-      return `__CTRL_${codes.length - 1}__`;
-    });
-    return { protectedText, codes };
-  }
-
-  function restoreControlCodes(text, codes) {
-    return text.replace(/__CTRL_(\d+)__/g, (_, idx) => codes[+idx]);
-  }
-
-  function processTranslation(rawText) {
-    if (!rawText || typeof rawText !== "string") return rawText;
-
-    const { protectedText, codes } = protectControlCodes(rawText);
-    const translated = TranslationManager.translate(protectedText);
-    return restoreControlCodes(translated, codes);
-  }
-
-  window.__processTranslation = processTranslation;
-
-  // ===============================
-  //        动态窗口钩子
-  // ===============================
-  const t = (s) => __processTranslation(s);
-
-  if (typeof Window_Base !== "undefined") {
-    const _convert = Window_Base.prototype.convertEscapeCharacters;
-    Window_Base.prototype.convertEscapeCharacters = function (text) {
-      return _convert.call(this, t(text));
-    };
-  }
-
-  if (typeof Game_Message !== "undefined") {
-    const _add = Game_Message.prototype.add;
-    Game_Message.prototype.add = function (text) {
-      return _add.call(this, t(text));
-    };
-  }
-
-  if (typeof Window_ChoiceList !== "undefined") {
-    const _drawItem = Window_ChoiceList.prototype.drawItem;
-    Window_ChoiceList.prototype.drawItem = function (index) {
-      const item = this.commandName(index);
-      this._list[index].name = t(item);
-      _drawItem.call(this, index);
-    };
-  }
-
-  if (typeof Window_Command !== "undefined") {
-    const _addCommand = Window_Command.prototype.addCommand;
-    Window_Command.prototype.addCommand = function (
-      name,
-      symbol,
-      enabled,
-      ext
-    ) {
-      _addCommand.call(this, t(name), symbol, enabled, ext);
-    };
-  }
-
-  if (typeof Window_BattleLog !== "undefined") {
-    const _addText = Window_BattleLog.prototype.addText;
-    Window_BattleLog.prototype.addText = function (text) {
-      _addText.call(this, t(text));
-    };
-  }
-
-  console.log("[Translator] 分桶匹配 + 缓存 + 控制符保护系统加载完成。");
-
-  window.TranslationManager = TranslationManager;
+  const _Window_Base_convertEscapeCharacters = Window_Base.prototype.convertEscapeCharacters;
+  Window_Base.prototype.convertEscapeCharacters = function (text) {
+    text = _Window_Base_convertEscapeCharacters.call(this, text);
+    return TranslationManager.translate(text);
+  };
+  //#endregion
 })();

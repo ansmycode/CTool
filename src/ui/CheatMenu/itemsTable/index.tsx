@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Table, InputNumber } from "antd";
+import "./index.css";
+
 
 interface Props {
   ItemsData: any;
@@ -61,13 +63,14 @@ const ItemTable: React.FC<Props> = ({ ItemsData, handleGainItem }) => {
     },
   ];
   return (
-    <div>
+    <div className="table-container">
       <Table
+        className="menu-table"
         columns={columns}
         dataSource={listData}
         rowKey="id"
         pagination={false}
-        scroll={{ y: "31rem" }} // 设置高度，启用虚拟滚动
+        scroll={{ y: '70vh' }}
         size="small"
       />
     </div>

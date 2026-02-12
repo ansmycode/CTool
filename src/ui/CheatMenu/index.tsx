@@ -11,6 +11,7 @@ import TranslateTool from "./translateTool/index";
 import { useGameData } from "@/components/useGameData";
 import type { TabsProps } from "antd";
 import { LoadingOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import "./index.css";
 
 interface GameProps {
   isGameStarting: boolean;
@@ -100,6 +101,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
           setSomeGameSettings={setSomeGameSettings}
         />
       ),
+      className: 'tab-pane-fullheight', // ← 关键
     },
     {
       key: "2",
@@ -107,6 +109,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
       children: (
         <ItemsTable ItemsData={gameData?.allItem} handleGainItem={gainItem} />
       ),
+      className: 'tab-pane-fullheight', // ← 关键
     },
     {
       key: "3",
@@ -117,6 +120,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
           handleGainItem={gainItem}
         />
       ),
+      className: 'tab-pane-fullheight', // ← 关键
     },
     {
       key: "4",
@@ -127,6 +131,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
           handleGainItem={gainItem}
         />
       ),
+      className: 'tab-pane-fullheight', // ← 关键
     },
     {
       key: "5",
@@ -137,6 +142,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
           changeVariables={modifyVariable}
         />
       ),
+      className: 'tab-pane-fullheight', // ← 关键
     },
     {
       key: "6",
@@ -147,18 +153,20 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
           changeSwitches={modifySwitch}
         />
       ),
+      className: 'tab-pane-fullheight', // ← 关键
     },
     {
       key: "7",
       label: "角色",
       children: (
         <ActorTable
-          actorData={gameData?.allMembers}
-          classData={gameData?.classList}
+          actorData={gameData?.allMembers ?? []}
+          classData={gameData?.classList ?? []}
           setActorInTeam={setInTeam}
           setActorData={setActorData}
         />
       ),
+      className: 'tab-pane-fullheight', // ← 关键
     },
     {
       key: "8",
@@ -169,6 +177,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
           sendTranslationData={sendTranslationData}
         />
       ),
+      className: 'tab-pane-fullheight', // ← 关键
     },
   ];
 
@@ -177,10 +186,11 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   };
 
   return (
-    <div>
+    <div className="cheat-menu">
       {contextHolder}
       {/* {messageContext} */}
       <Tabs
+        className="cheat-menu-tabs"
         activeKey={activeKey}
         items={menuList}
         onChange={TabsChange}

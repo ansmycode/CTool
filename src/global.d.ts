@@ -3,7 +3,7 @@ export {};
 declare global {
   interface Window {
     electronAPI: {
-      applyFilters: (args: { gameInfo: any; rules: any }) => Promise<void>;
+      applyFilters: (args: { gameInfo: any }) => Promise<void>;
       saveTranslateFile: (args: {
         textArr: string[];
         gameInfo: any;

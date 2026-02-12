@@ -6,11 +6,9 @@ import {
   Input,
   Space,
   message,
-  Form,
-  Checkbox,
 } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
-import type { FilterRules } from "@/types/Game";
+// import type { FilterRules } from "@/types/Game";
 import "./index.css";
 type ExtractedText = {
   id: number;
@@ -21,7 +19,7 @@ type ExtractedText = {
 type FilterModalProps = {
   visible: boolean;
   onClose: () => void;
-  getGameText: (rules: FilterRules) => Promise<void>;
+  getGameText?: () => Promise<void>;
   extractText: any[];
   gameInfo: any;
 };
@@ -29,24 +27,23 @@ type FilterModalProps = {
 export default function FilterModal({
   visible,
   onClose,
-  getGameText,
   extractText,
   gameInfo,
 }: FilterModalProps) {
   const [data, setData] = useState<ExtractedText[]>(extractText);
-  const [form] = Form.useForm();
+  // const [form] = Form.useForm();
 
-  useEffect(() => {
-    if (visible) {
-      // 默认规则
-      form.setFieldsValue({
-        invalid: true,
-        command: true,
-        merge: false,
-        regexList: "",
-      });
-    }
-  }, [visible]);
+  // useEffect(() => {
+  //   if (visible) {
+  //     // 默认规则
+  //     form.setFieldsValue({
+  //       invalid: true,
+  //       command: true,
+  //       merge: false,
+  //       regexList: "",
+  //     });
+  //   }
+  // }, [visible]);
 
   useEffect(() => {
     setData(extractText);
@@ -65,26 +62,26 @@ export default function FilterModal({
     }
   };
 
-  const ruleChange = async () => {
-    try {
-      const values = await form.validateFields();
-      const rules: FilterRules = {
-        invalid: values.invalid || false,
-        command: values.command || false,
-        merge: values.merge || false,
-        regexList: values.regexList
-          ? values.regexList
-              .split("\n")
-              .map((r: string) => r.trim())
-              .filter(Boolean)
-          : [],
-      };
+  // const ruleChange = async () => {
+  //   try {
+  //     const values = await form.validateFields();
+  //     const rules: FilterRules = {
+  //       invalid: values.invalid || false,
+  //       command: values.command || false,
+  //       merge: values.merge || false,
+  //       regexList: values.regexList
+  //         ? values.regexList
+  //             .split("\n")
+  //             .map((r: string) => r.trim())
+  //             .filter(Boolean)
+  //         : [],
+  //     };
 
-      getGameText(rules);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  //     getGameText(rules);
+  //   } catch (e) {
+  //     console.error(e);
+  //   }
+  // };
 
   const remToPx = (rem: number) =>
     rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -93,7 +90,7 @@ export default function FilterModal({
     <Modal
       open={visible}
       onCancel={onClose}
-      title="提取文本"
+      title="文本预览"
       width="98%"
       centered
       footer={
@@ -114,7 +111,7 @@ export default function FilterModal({
       // }}
       >
         {/* 过滤规则表单 */}
-        <Form form={form} layout="vertical" className="filter-form">
+        {/* <Form form={form} layout="vertical" className="filter-form">
           <Space>
             <Form.Item name="invalid" valuePropName="checked" noStyle>
               <Checkbox onChange={ruleChange}>基本过滤</Checkbox>
@@ -126,10 +123,7 @@ export default function FilterModal({
               <Checkbox onChange={ruleChange}>整句拼接</Checkbox>
             </Form.Item>
           </Space>
-          {/* <Form.Item name="regexList" label="自定义正则表达式（每行一个）">
-          <Input.TextArea placeholder="例如：^\d+$ （可多行输入）" rows={3} />
-        </Form.Item> */}
-        </Form>
+        </Form> */}
 
         {/* 文本表格 */}
         <Table

@@ -242,7 +242,7 @@
 
         window.translationData = translated; // 内存缓存
         localStorage.setItem("translationDict", JSON.stringify(translated)); // 持久化
-        window.TranslationManager.reload(translated);
+        // window.TranslationManager.reload(translated);
         sendJson(res, 200, { success: true });
       } catch (e) {
         sendError(res, 500, "Error parsing request", { error: e.message });

@@ -2,18 +2,17 @@ import React, { useState, useEffect } from "react";
 import { Table, InputNumber, Checkbox, Input, Select, Card, Form } from "antd";
 
 interface Props {
-  actorData: any;
-  classData: any;
+  actorData: any[];
+  classData: any[];
   setActorInTeam: (ids: Array<number>) => Promise<void>;
   setActorData: (actor: any) => Promise<void>;
 }
+
 interface Item {
   id: number;
   name: string;
   playerHasCount: number;
 }
-
-// const { Option } = Select;
 
 const actorList = [
   { key: "name", value: "姓名" },
@@ -37,25 +36,50 @@ const ActorTable: React.FC<Props> = ({
   classData,
   setActorData,
 }) => {
-  const [listData, setlistData] = useState(actorData);
+  const [listData, setListData] = useState(actorData);
+  const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
   const [form] = Form.useForm();
 
   useEffect(() => {
-    setlistData(actorData);
+    setListData(actorData);
   }, [actorData]);
 
   const inTeamChange = (id: number, value: boolean) => {
-    const _listData = listData.map((item: any) =>
+    const newList = listData.map((item: any) =>
       item.id === id ? { ...item, inTeam: value } : item
     );
-    setlistData(_listData);
+    setListData(newList);
+
     setActorInTeam(
-      _listData.filter((item: any) => item.inTeam).map((actor: any) => actor.id)
+      newList.filter((item: any) => item.inTeam).map((actor: any) => actor.id)
     );
   };
 
   const onSubmit = (values: any) => {
     setActorData(values);
+  };
+
+  const renderFormItem = (item: any) => {
+    if (item.key === "name") {
+      return <Input />;
+    }
+
+    if (item.key === "classId") {
+      return (
+        <Select
+          style={{ width: "100%" }}
+          options={classData}
+          fieldNames={{ label: "name", value: "id" }}
+        />
+      );
+    }
+
+    return (
+      <InputNumber
+        min={item.key === "level" ? 1 : 0}
+        style={{ width: "100%" }}
+      />
+    );
   };
 
   const expandedRowRender = (actor: any) => {
@@ -67,7 +91,7 @@ const ActorTable: React.FC<Props> = ({
           initialValues={actor}
           onFinish={onSubmit}
           onValuesChange={(_, allValues) => {
-            console.log("修改后的数据：", allValues);
+            setActorData({ ...actor, ...allValues });
           }}
         >
           <div
@@ -77,45 +101,11 @@ const ActorTable: React.FC<Props> = ({
               gap: "16px 24px",
             }}
           >
-            {actorList.map((item: any) => {
-              return (
-                <Form.Item key={item.key} name={item.key} label={item.value}>
-                  {item.key === "name" ? (
-                    <Input
-                      onBlur={(e) => {
-                        const initialValue = form.getFieldValue(item.key);
-                        if (e.target.value !== initialValue) {
-                          form.submit();
-                        }
-                      }}
-                    />
-                  ) : item.key === "classId" ? (
-                    <Select
-                      style={{ width: "100%" }}
-                      onChange={(value) => {
-                        const initialValue = form.getFieldValue(item.key);
-                        if (value !== initialValue) {
-                          form.submit();
-                        }
-                      }}
-                      options={classData}
-                      fieldNames={{ label: "name", value: "id" }}
-                    />
-                  ) : (
-                    <InputNumber
-                      min={item.key === "level" ? 1 : 0}
-                      style={{ width: "100%" }}
-                      onBlur={(e) => {
-                        const initialValue = form.getFieldValue(item.key);
-                        if (Number(e.target.value) !== initialValue) {
-                          form.submit();
-                        }
-                      }}
-                    />
-                  )}
-                </Form.Item>
-              );
-            })}
+            {actorList.map((item) => (
+              <Form.Item key={item.key} name={item.key} label={item.value}>
+                {renderFormItem(item)}
+              </Form.Item>
+            ))}
           </div>
         </Form>
       </Card>
@@ -139,27 +129,30 @@ const ActorTable: React.FC<Props> = ({
     {
       title: "ID",
       dataIndex: "id",
-      ellipsis: true,
-      width: 50,
+      width: 60,
     },
     {
       title: "名称",
       dataIndex: "name",
-      ellipsis: true,
     },
   ];
+
   return (
-    <div>
+    <div className="table-container">
       <Table
         columns={columns}
         dataSource={listData}
         rowKey="id"
         pagination={false}
-        scroll={{ y: "31rem" }} // 设置高度，启用虚拟滚动
+        scroll={{ y: "70vh" }}
         size="small"
         expandable={{
+          expandedRowKeys: expandedKeys,
+          onExpand: (expanded, record: any) => {
+            setExpandedKeys(expanded ? [record.id] : []);
+            form.setFieldsValue(record);
+          },
           expandedRowRender,
-          rowExpandable: () => true,
         }}
       />
     </div>

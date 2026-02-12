@@ -67,7 +67,7 @@ const ArmorTable: React.FC<Props> = ({ ArmorsData, handleGainItem }) => {
         dataSource={listData}
         rowKey="id"
         pagination={false}
-        scroll={{ y: "31rem" }} // 设置高度，启用虚拟滚动
+        scroll={{ y: '70vh' }} // 设置高度，启用虚拟滚动
         size="small"
       />
     </div>

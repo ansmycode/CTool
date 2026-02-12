@@ -1,0 +1,22 @@
+.author-container {
+  display: flex;
+  flex: 1;
+  /* padding: 16px; */
+  overflow-y: auto;
+}
+
+.author-card {
+  width: 100%;
+}
+
+.author-list {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+
+.author-contact {
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}

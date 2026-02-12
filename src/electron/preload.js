@@ -8,8 +8,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   chooseGame: () => ipcRenderer.invoke("choose-game"), //选择游戏
   sendMessage: (channel, message) => ipcRenderer.send(channel, message), // 渲染 ===> 主
   onReceiveMessage: (channel, callback) => ipcRenderer.on(channel, callback), //主 ===> 渲染
-  applyFilters: ({ gameInfo, rules }) =>
-    ipcRenderer.invoke("apply-filters", { gameInfo, rules }),
+  applyFilters: ({ gameInfo }) =>
+    ipcRenderer.invoke("apply-filters", { gameInfo }),
   saveTranslateFile: ({ textArr, gameInfo }) =>
     ipcRenderer.invoke("save-translate-file", { textArr, gameInfo }),
   onExtractStatus: (callback) =>

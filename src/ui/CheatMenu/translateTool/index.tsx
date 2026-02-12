@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Button, Space, Tooltip, Modal, notification } from "antd";
-import type { FilterRules } from "@/types/Game";
 import ExtractModal from "@/components/ExtractModal";
 import "./index.css";
 
@@ -31,18 +30,10 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
     }
   }, [builtState]);
 
-  const handleExtractText = async () => {
+  const handleExtractText = () => {
     setExtractLoading(true);
     if (extractText.length === 0) {
-      await getGameText({
-        invalid: true,
-        command: true,
-        merge: true,
-        regexList: ""
-          .split("\n")
-          .map((r: string) => r.trim())
-          .filter(Boolean),
-      });
+      getGameText();
     }
     setExtractLoading(false);
     setExtractModalShow(true);
@@ -92,13 +83,12 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
     setExtractModalShow(false);
   };
 
-  const getGameText = async (rules: FilterRules) => {
+  const getGameText = async () => {
     try {
       const newData: any = await window.electronAPI.applyFilters({
-        gameInfo,
-        rules,
+        gameInfo
       });
-      setExtractText(newData);
+      if (newData) setExtractText(newData);
     } catch (e) {
       console.error("错误:" + e);
     }

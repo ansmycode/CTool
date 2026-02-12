@@ -1,31 +1,21 @@
 // App.tsx
 import React, { useState } from "react";
-import { Layout, Button, Divider, message, Tabs } from "antd";
+import { Layout, Button, message, Tabs } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 const { Content, Footer } = Layout;
 import CheatMenu from "../CheatMenu/index";
-import type { TabsProps } from "antd";
 import GameHistory from "@/ui/GameHistory";
-
-// import { GameDataProvider } from "../../components/GameDataContext";
+import AuthorInfo from '@/ui/AuthorInfo';
 
 import "./index.css";
 
 const Main: React.FC = () => {
-  // const [gamePath, setGamePath] = useState<string | null>(null);
   const [gameInfo, setGameInfo] = useState<any>({});
-  const [isGameStarting, setIsGameStarting] = useState<any>(false);
+  const [isGameStarting, setIsGameStarting] = useState<boolean>(false);
   const [activeKey, setActiveKey] = useState("1");
 
-  const TabsChange = (key: string) => {
-    setActiveKey(key);
-  };
-
   const chooseGame = async () => {
-    //获取游戏路径
     const _gamePath = await (window as any).electronAPI.chooseGame();
-    // console.log(_gamePath);
-    // setGamePath(_gamePath);
     const _gameInfo = await (window as any).electronAPI.detectEngine(_gamePath);
     setGameInfo(_gameInfo);
   };
@@ -47,18 +37,17 @@ const Main: React.FC = () => {
   (window as any).electronAPI.onReceiveMessage(
     "game-closed",
     (_: any, result: any) => {
-      // console.log(result.meesage);
       setIsGameStarting(result.isGameStarting);
       setGameInfo({});
     }
   );
 
-  const menuList: TabsProps["items"] = [
+  const tabsItems = [
     {
       key: "1",
-      label: <div className="tab-main">游戏启动</div>,
+      label: "游戏启动",
       children: (
-        <div>
+        <div style={{ padding: 16 }}>
           <div onClick={chooseGame} className="drop-zone">
             <InboxOutlined style={{ fontSize: 48, color: "#1890ff" }} />
             <p style={{ marginTop: 16 }}>
@@ -66,56 +55,61 @@ const Main: React.FC = () => {
             </p>
           </div>
           {gameInfo.gamePath && (
-            <>
+            <div className="tool-gameinfo" >
               <p>已检测路径: {gameInfo.gamePath}</p>
               <p>游戏引擎: {gameInfo?.engine || "未知"}</p>
               <p>游戏版本: {gameInfo?.version || "未知"}</p>
               <Button
                 type="primary"
-                onClick={() => {
-                  handleLaunchGame(gameInfo);
-                }}
-                disabled={gameInfo?.engine ? false : true}
+                onClick={() => handleLaunchGame(gameInfo)}
+                disabled={!gameInfo?.engine}
               >
                 启动游戏并注入脚本
               </Button>
-            </>
+            </div>
           )}
         </div>
       ),
+      className: "tool-tabPane"
     },
     {
       key: "2",
-      label: <div className="tab-normal">游玩历史</div>,
-      children: <GameHistory historyLaunchGame={historyLaunchGame} />,
+      label: "游玩历史",
+      children: (
+        <GameHistory historyLaunchGame={historyLaunchGame} />
+      ),
+      className: "tool-tabPane"
     },
     {
       key: "3",
-      label: <div className="tab-normal">作者的话</div>,
-      children: <div className="">作者的话</div>,
+      label: "作者的话",
+      children: <AuthorInfo />,
+      className: "tool-tabPane"
     },
   ];
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {isGameStarting ? (
-        <Content className="tool-cheatmenu">
+    <Layout
+      className="app-layout"
+    >
+      <Content
+        className="tool-content"
+      >
+        {isGameStarting ? (
           <CheatMenu isGameStarting={isGameStarting} gameInfo={gameInfo} />
-          <Divider />
-        </Content>
-      ) : (
-        <Content className="tool-main">
+        ) : (
           <Tabs
+            className="tool-tabs"
             activeKey={activeKey}
-            items={menuList}
-            onChange={TabsChange}
+            onChange={setActiveKey}
+            items={tabsItems}
             type="card"
           />
-          <Divider />
-        </Content>
-      )}
-
-      <Footer style={{ textAlign: "center" }}>CTool v1.0.0</Footer>
+        )}
+      </Content>
+      <Footer className="layout-footer" style={{ textAlign: "center" }}>
+        CTool v0.0.1
+      </Footer>
     </Layout>
   );
 };

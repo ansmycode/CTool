@@ -53,9 +53,9 @@ export interface GameEngineAdapter {
 
 export type EngineType = "MV" | "MZ" | "wolf" | null;
 
-export type FilterRules = {
-  invalid: boolean; // 无效文本过滤
-  command: boolean; // 指令文本过滤
-  merge: boolean; // 整句拼接
-  regexList: string[]; // 自定义正则
-};
+// export type FilterRules = {
+//   invalid: boolean; // 无效文本过滤
+//   command: boolean; // 指令文本过滤
+//   merge: boolean; // 整句拼接
+//   regexList: string[]; // 自定义正则
+// };

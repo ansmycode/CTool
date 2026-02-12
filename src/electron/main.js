@@ -152,12 +152,12 @@ ipcMain.handle("inject-script", async (_event, gameInfo) => {
 ipcMain.handle("inject-other", async (_event, gamePath) => {});
 
 // 提取文本
-ipcMain.handle("apply-filters", async (_event, { gameInfo, rules }) => {
+ipcMain.handle("apply-filters", async (_event, { gameInfo }) => {
   if (!gameInfo.gamePath || !gameInfo.engine) return;
   if (gameInfo.engine === "MV" || gameInfo.engine === "MZ") {
     const gameDir = path.dirname(gameInfo.gamePath);
     try {
-      const results = await mzExtractText(gameDir, rules);
+      const results = await mzExtractText(gameDir);
       return results;
     } catch (err) {
       return err.message;

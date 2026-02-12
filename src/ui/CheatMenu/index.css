@@ -1,0 +1,34 @@
+.cheat-menu {
+  display: flex;
+  flex: 1;
+  min-height: 0; 
+  flex-direction: column;
+}
+
+.cheat-menu-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-pane-fullheight {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cheat-menu-tabs .ant-tabs-content-holder {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.cheat-menu-tabs .ant-tabs-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
