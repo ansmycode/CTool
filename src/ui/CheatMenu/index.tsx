@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Tabs, notification } from "antd";
 import ArmorTable from "./armorTable/index";
 import Home from "./home/index";
@@ -40,24 +40,10 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   console.log("游戏启动" + isGameStarting);
   console.log("游戏初始化" + gameReady);
 
-  useEffect(() => {
-    window.addEventListener("focus", getGameDataWithNotify);
-    return () => {
-      window.removeEventListener("focus", getGameDataWithNotify);
-    };
-  }, []);
-
-  window.electronAPI.onReceiveMessage(
-    "game-ready",
-    (_: any, result: any) => {
-    setGameReady(result)
-    }
-  );
-
-  const getGameDataWithNotify = async () => {
-    const notifyKey = "get-game-data";
-
+  const getGameDataWithNotify = useCallback(() => {
+    if (!gameReady) return; // gameReady 为 false 时直接跳过
     // 打开加载中提示
+    const notifyKey = "get-game-data";
     api.open({
       key: notifyKey,
       message: "正在获取游戏数据",
@@ -66,7 +52,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     });
 
     try {
-      await getGameData();
+      getGameData();
       // 成功 → 关闭加载提示
       api.destroy(notifyKey);
     } catch (err: any) {
@@ -82,7 +68,55 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
 
       throw err;
     }
-  };
+  }, [gameReady]);
+
+
+  useEffect(() => {
+    if (gameReady) {
+      window.addEventListener("focus", getGameDataWithNotify);
+      return () => {
+        window.removeEventListener("focus", getGameDataWithNotify);
+      };
+    }
+  }, [getGameDataWithNotify]);
+
+  window.electronAPI.onReceiveMessage(
+    "game-ready",
+    (_: any, result: any) => {
+      setGameReady(result)
+    }
+  );
+
+  // const getGameDataWithNotify = async () => {
+  //   const notifyKey = "get-game-data";
+
+  //   // 打开加载中提示
+  //   api.open({
+  //     key: notifyKey,
+  //     message: "正在获取游戏数据",
+  //     icon: <LoadingOutlined style={{ color: "#1890ff" }} spin />,
+  //     duration: 0,
+  //   });
+
+  //   try {
+  //     await getGameData();
+  //     // 成功 → 关闭加载提示
+  //     api.destroy(notifyKey);
+  //   } catch (err: any) {
+  //     // 关闭加载提示
+  //     api.destroy(notifyKey);
+  //     // 显示错误提示
+  //     api.error({
+  //       key: `${notifyKey}-error`,
+  //       message: "数据更新失败",
+  //       description: err?.message || "未知错误",
+  //       icon: <CloseCircleOutlined style={{ color: "#ff4d4f" }} />,
+  //     });
+
+  //     throw err;
+  //   }
+  // };
+
 
   const menuList: TabsProps["items"] = [
     {

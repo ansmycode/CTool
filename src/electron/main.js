@@ -5,7 +5,6 @@ import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import {
   detectAndReadInfo,
-  restoreOriginalHtml,
   deleteBackupFile,
 } from "../utils/gameUtil.js";
 import {
@@ -77,7 +76,7 @@ function launchGame(gameInfo) {
   // 监听游戏进程是否关闭
   gameProcess.on("exit", (code, signal) => {
     console.log(`游戏已关闭，恢复原始 index.html 文件。`);
-    restoreOriginalHtml(path.dirname(gameInfo.gamePath)); // 恢复原始 HTML
+    // restoreOriginalHtml(path.dirname(gameInfo.gamePath)); // 恢复原始 HTML
     deleteBackupFile(path.dirname(gameInfo.gamePath)); //删除备份文件
     mainWindow.webContents.send("game-closed", {
       message: "游戏进程未找到或已经关闭！",
