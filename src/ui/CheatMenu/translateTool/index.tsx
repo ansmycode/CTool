@@ -106,7 +106,7 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
         <Button type="primary" onClick={onLoadTranslated}>
           加载翻译文件
         </Button>
-        <Tooltip title="内置了基本的无效文本过滤,尽可能减低无效文本带来的性能消耗(实际上根本消耗不了什么性能)">
+        <Tooltip title="提取不是很全,没有对js脚本中的文本做适配">
           <Button
             onClick={handleExtractText}
             type="primary"

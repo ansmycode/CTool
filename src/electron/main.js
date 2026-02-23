@@ -5,17 +5,20 @@ import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import {
   detectAndReadInfo,
-  injectMVMZ,
   restoreOriginalHtml,
   deleteBackupFile,
-  findFileOrDirWithDepthLimit,
 } from "../utils/gameUtil.js";
+import {
+  injectMVMZ,
+} from "../engine/mvmz/injectScript.js";
 import {
   readGameHistory,
   saveGameHistory,
   deleteGameHistory,
+  findFileOrDirWithDepthLimit
 } from "../utils/tool.js";
-import { mzExtractText, backup, replaceFromObject } from "../utils/extract.js";
+import { ExtractText, backup, replaceFromObject } from "../engine/mvmz/extract.js"
+import { createServer } from '../electron/server.js';
 // import { getGameData } from "../service/mvmzApi.ts";
 
 let mainWindow;
@@ -65,13 +68,6 @@ function ensureEssentialDirs(essentials) {
   }
 }
 
-// // 懒创建某个目录（比如 screenshots）
-// function ensureDirIfNeeded(dirPath) {
-//   if (!fs.existsSync(dirPath)) {
-//     fs.mkdirSync(dirPath, { recursive: true });
-//   }
-// }
-
 // 启动游戏
 function launchGame(gameInfo) {
   // 启动游戏进程
@@ -115,7 +111,9 @@ app.on("ready", () => {
   });
   // mainWindow.setMenu(null); //关闭原始自带的菜单
   mainWindow.loadFile(path.join(app.getAppPath(), "dist-react", "index.html"));
+  createServer(mainWindow);
 });
+
 
 // 选择游戏
 ipcMain.handle("choose-game", async () => {
@@ -149,7 +147,7 @@ ipcMain.handle("inject-script", async (_event, gameInfo) => {
 });
 
 // 其他游戏引擎注入
-ipcMain.handle("inject-other", async (_event, gamePath) => {});
+ipcMain.handle("inject-other", async (_event, gamePath) => { });
 
 // 提取文本
 ipcMain.handle("apply-filters", async (_event, { gameInfo }) => {
@@ -157,7 +155,7 @@ ipcMain.handle("apply-filters", async (_event, { gameInfo }) => {
   if (gameInfo.engine === "MV" || gameInfo.engine === "MZ") {
     const gameDir = path.dirname(gameInfo.gamePath);
     try {
-      const results = await mzExtractText(gameDir);
+      const results = await ExtractText(gameDir);
       return results;
     } catch (err) {
       return err.message;
@@ -178,6 +176,8 @@ ipcMain.handle("save-translate-file", async (_event, { textArr, gameInfo }) => {
     console.error("写入翻译文件失败:", e);
   }
 });
+
+
 
 // 内嵌翻译
 ipcMain.handle("built-in-translation", async (event, { gamePath, engine }) => {

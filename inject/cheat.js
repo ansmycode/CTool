@@ -1,4 +1,4 @@
-// 文件路径: js/APIPlugin.js
+// 文件路径: js/cheat.js
 
 (function () {
   const http = require("http");
@@ -297,4 +297,37 @@
   server.listen(port, () => {
     console.log(`Game REST API running on http://localhost:${port}`);
   });
+
+  // ======== 游戏加载完成主动通知工具端 ========
+  function notifyGameReady() {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "http://127.0.0.1:5001/gameReady", true); // 工具端端口
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            console.log("主动通知工具端: 游戏已加载完成");
+          } else {
+            console.error("通知工具端失败:", xhr.status, xhr.responseText);
+          }
+        }
+      };
+      xhr.send(JSON.stringify({ status: "ready" }));
+    } catch (e) {
+      console.error("XHR 异常:", e);
+    }
+  }
+
+  // Hook Scene_Map.start → 地图加载完成即游戏初始化完成
+  const _Scene_Boot_start = Scene_Boot.prototype.start;
+  Scene_Boot.prototype.start = function () {
+    _Scene_Boot_start.call(this);
+    setTimeout(() => {
+      // 确认数据初始化完成
+      if ($dataSystem && $gameParty) {
+        notifyGameReady();
+      }
+    }, 200);
+  };
 })();

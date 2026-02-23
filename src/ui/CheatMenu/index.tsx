@@ -11,6 +11,7 @@ import TranslateTool from "./translateTool/index";
 import { useGameData } from "@/components/useGameData";
 import type { TabsProps } from "antd";
 import { LoadingOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import LoadingOverlay from '@/components/LoadingOverlay';
 import "./index.css";
 
 interface GameProps {
@@ -20,12 +21,12 @@ interface GameProps {
 
 const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   const [activeKey, setActiveKey] = useState("1");
+  const [gameReady, setGameReady] = useState(false);
   const [api, contextHolder] = notification.useNotification();
   // const [messageApi, messageContext] = message.useMessage();
   const {
     gameData,
     getGameData,
-    gameInit,
     modifyGold,
     modifyVariable,
     modifySwitch,
@@ -36,7 +37,9 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     achieveVictory,
     setSomeGameSettings,
   } = useGameData(gameInfo.engine);
-  console.log("游戏" + isGameStarting);
+  console.log("游戏启动" + isGameStarting);
+  console.log("游戏初始化" + gameReady);
+
   useEffect(() => {
     window.addEventListener("focus", getGameDataWithNotify);
     return () => {
@@ -44,19 +47,12 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     };
   }, []);
 
-  useEffect(() => {
-    async () => {
-      const result = await gameInit();
-      if (!result) {
-        api.open({
-          key: "is-game-links",
-          message: "链接失败,功能失效",
-          icon: <CloseCircleOutlined style={{ color: "#ff4d4f" }} />,
-          duration: 4,
-        });
-      }
-    };
-  }, []);
+  window.electronAPI.onReceiveMessage(
+    "game-ready",
+    (_: any, result: any) => {
+    setGameReady(result)
+    }
+  );
 
   const getGameDataWithNotify = async () => {
     const notifyKey = "get-game-data";
@@ -189,6 +185,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     <div className="cheat-menu">
       {contextHolder}
       {/* {messageContext} */}
+      <LoadingOverlay visible={!gameReady} />
       <Tabs
         className="cheat-menu-tabs"
         activeKey={activeKey}

@@ -1,4 +1,4 @@
-export {};
+export { };
 
 declare global {
   interface Window {
@@ -18,6 +18,10 @@ declare global {
       readGameHistory: () => Promise<void>;
       openGameDir: (gamePath: string) => Promise<void>;
       deleteGameHistory: (gamePath: string) => Promise<void>;
+      onReceiveMessage: (
+        channel: string,
+        callback: (event: unknown, data: any) => void
+      ) => void;
       test: () => Promise<void>;
     };
   }

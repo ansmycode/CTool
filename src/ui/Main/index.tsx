@@ -34,7 +34,7 @@ const Main: React.FC = () => {
     handleLaunchGame(infoFromHistory);
   };
 
-  (window as any).electronAPI.onReceiveMessage(
+  window.electronAPI.onReceiveMessage(
     "game-closed",
     (_: any, result: any) => {
       setIsGameStarting(result.isGameStarting);

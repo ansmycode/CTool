@@ -1,6 +1,10 @@
+
+/*
+适配mv和mz的文本提取
+*/
 import fs from "fs";
 import path from "path";
-import { findFileOrDirWithDepthLimit } from "./gameUtil.js";
+import { findFileOrDirWithDepthLimit } from "../../utils/tool.js";
 import archiver from "archiver";
 
 const keysToReplace = [
@@ -16,6 +20,7 @@ const keysToReplace = [
   "switches",
 ];
 
+//游戏文本过滤成纯净文本
 function filterValidText(str) {
   if (!str || typeof str !== "string") return "";
 
@@ -51,7 +56,7 @@ function filterValidText(str) {
   return cleaned;
 }
 
-
+//从obj中递归提取文本
 function extractFromObject(obj, collectedMap) {
   if (!obj) return;
   // 字符串
@@ -79,7 +84,7 @@ function extractFromObject(obj, collectedMap) {
  * 提取游戏的文本
  * @param {string} gameDir 起始目录
  */
-export async function mzExtractText(gameDir) {
+export async function ExtractText(gameDir) {
   const target = ["data"];
   const maxDepth = 3;
   const collectedMap = new Map();
