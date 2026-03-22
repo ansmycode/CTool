@@ -11,8 +11,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "build:main": "esbuild src/electron/main.js --bundle --platform=node --outdir=dist-electron",
-    "dist": "cnpm run build && electron-builder --win"
+    "build:main": "esbuild src/electron/main.js --bundle --platform=node --target=node18 --format=esm --outdir=dist-electron",
+    "dist": "npm run build && electron-builder --win"
   },
   "dependencies": {
     "antd": "^5.26.6",
@@ -49,6 +49,15 @@
         }
       ]
     },
+    "extraResources": [
+      {
+        "from": "tool_data",
+        "to": "tool_data",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "electronDownload": {
       "cache": "C:\\Users\\Y7000\\AppData\\Local\\electron\\Cache"
     }

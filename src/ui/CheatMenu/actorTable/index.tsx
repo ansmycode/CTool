@@ -15,12 +15,13 @@ interface Item {
 }
 
 const actorList = [
+  { key: "id", value: "角色ID" },
   { key: "name", value: "姓名" },
   { key: "classId", value: "职业" },
   { key: "level", value: "等级" },
   { key: "exp", value: "经验值" },
-  { key: "hp", value: "HP" },
-  { key: "mp", value: "MP" },
+  { key: "mhp", value: "最大HP" },
+  { key: "mmp", value: "最大MP" },
   { key: "tp", value: "TP" },
   { key: "atk", value: "攻击力" },
   { key: "def", value: "防御力" },
@@ -55,21 +56,34 @@ const ActorTable: React.FC<Props> = ({
     );
   };
 
-  const onSubmit = (values: any) => {
-    setActorData(values);
+  const handleBlur = (item: any) => {
+    const value = form.getFieldValue(item.key);
+    const id = form.getFieldValue("id");
+
+    const actor = listData.find((a) => a.id === id);
+
+    if (actor && actor[item.key] === value) return;
+
+    setActorData({
+      id,
+      [item.key]: value,
+    });
   };
 
   const renderFormItem = (item: any) => {
     if (item.key === "name") {
-      return <Input />;
+      return <Input disabled />;
     }
-
+    if (item.key === "id") {
+      return <Input disabled />;
+    }
     if (item.key === "classId") {
       return (
         <Select
           style={{ width: "100%" }}
           options={classData}
           fieldNames={{ label: "name", value: "id" }}
+          onChange={() => handleBlur(item)}
         />
       );
     }
@@ -78,6 +92,7 @@ const ActorTable: React.FC<Props> = ({
       <InputNumber
         min={item.key === "level" ? 1 : 0}
         style={{ width: "100%" }}
+        onBlur={() => handleBlur(item)}
       />
     );
   };
@@ -89,10 +104,6 @@ const ActorTable: React.FC<Props> = ({
           form={form}
           layout="vertical"
           initialValues={actor}
-          onFinish={onSubmit}
-          onValuesChange={(_, allValues) => {
-            setActorData({ ...actor, ...allValues });
-          }}
         >
           <div
             style={{

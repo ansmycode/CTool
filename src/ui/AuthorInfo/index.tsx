@@ -35,7 +35,7 @@ const AuthorInfo: React.FC = () => {
                 <Space>
                   <QqOutlined />
                   <Text>作者 QQ：</Text>
-                  <Text copyable>3312308240</Text>
+                  <Text copyable>3344505357</Text>
                 </Space>
 
                 <Space>

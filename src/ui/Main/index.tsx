@@ -59,13 +59,16 @@ const Main: React.FC = () => {
               <p>已检测路径: {gameInfo.gamePath}</p>
               <p>游戏引擎: {gameInfo?.engine || "未知"}</p>
               <p>游戏版本: {gameInfo?.version || "未知"}</p>
-              <Button
-                type="primary"
-                onClick={() => handleLaunchGame(gameInfo)}
-                disabled={!gameInfo?.engine}
-              >
-                启动游戏并注入脚本
-              </Button>
+              {
+                gameInfo?.engine ? <Button
+                  type="primary"
+                  onClick={() => handleLaunchGame(gameInfo)}
+                  disabled={!gameInfo?.engine}
+                >
+                  启动游戏并注入脚本
+                </Button> : <span style={{ color: "#999" }}>不支持或未知引擎</span>
+              }
+
             </div>
           )}
         </div>

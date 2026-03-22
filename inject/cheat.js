@@ -48,8 +48,8 @@
                 classId: actor.currentClass().id,
                 className: actor.currentClass().name,
                 exp: actor.currentExp(),
-                hp: actor.hp,
-                mp: actor.mp,
+                mhp: actor.mhp,
+                mmp: actor.mmp,
                 tp: actor.tp,
                 atk: actor.atk,
                 def: actor.def,
@@ -212,15 +212,42 @@
     },
 
     "POST /setActorData": async (req, res) => {
+      const paramMap = {
+        mhp: 0,
+        mmp: 1,
+        atk: 2,
+        def: 3,
+        mat: 4,
+        mdf: 5,
+        agi: 6,
+        luk: 7
+      };
       try {
         const { actor } = await parseRequestBody(req);
-        $gameParty.allMembers()[actor.id].setName(actor.name);
-        $gameParty.allMembers()[actor.id].changeExp(actor.exp);
-        $gameParty.allMembers()[actor.id].changeLevel(actor.level);
-        $gameParty.allMembers()[actor.id].changeClass(actor.classId, true);
-        $gameParty.allMembers()[actor.id].setHp(actor.hp);
-        $gameParty.allMembers()[actor.id].setMp(actor.mp);
-        $gameParty.allMembers()[actor.id].setTp(actor.tp);
+        for (const key in actor) {
+          if (key === "id") continue;
+
+          // 参数类
+          if (paramMap[key] !== undefined) {
+            const paramId = paramMap[key];
+            const baseValue = $gameActors.actor(actor.id).paramBase(paramId) //基础数值
+            $gameActors.actor(actor.id)._paramPlus[paramId] = actor[key] - baseValue
+            continue;
+          }
+
+          if (key === 'level') {
+            $gameActors.actor(actor.id).changeLevel(actor[key])
+            continue;
+          }
+          if (key === 'classId') {
+            $gameActors.actor(actor.id).changeClass(actor[key], true)
+            continue;
+          }
+          if (key === 'exp') {
+            $gameActors.actor(actor.id).changeExp(actor[key])
+            continue;
+          }
+        }
 
         sendJson(res, 200, { success: true });
       } catch (e) {

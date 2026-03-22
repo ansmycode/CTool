@@ -26,7 +26,7 @@ let isGameStarting = false;
 let gameInfo;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const appRoot = process.cwd(); // 你的 exe 所在目录（打包后）
+const appRoot = path.dirname(app.getPath("exe"));; // 你的 exe 所在目录（打包后）
 // 或者用 path.dirname(app.getPath("exe"))
 
 // 必要资源配置
