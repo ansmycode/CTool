@@ -7,15 +7,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getRpgmvmzData: () => ipcRenderer.invoke("get-rpgmvmz-data"), //其他引擎注入脚本操作
   chooseGame: () => ipcRenderer.invoke("choose-game"), //选择游戏
   sendMessage: (channel, message) => ipcRenderer.send(channel, message), // 渲染 ===> 主
-  onReceiveMessage: (channel, callback) => ipcRenderer.on(channel, callback), //主 ===> 渲染
+  onReceiveMessage: (channel, callback) => {
+    ipcRenderer.on(channel, callback);
+    return () => {
+      ipcRenderer.removeListener(channel, callback);
+    };
+  }, //主 ===> 渲染
   applyFilters: ({ gameInfo }) =>
     ipcRenderer.invoke("apply-filters", { gameInfo }),
   saveTranslateFile: ({ textArr, gameInfo }) =>
     ipcRenderer.invoke("save-translate-file", { textArr, gameInfo }),
-  onExtractStatus: (callback) =>
-    ipcRenderer.on("extract-status", (_, status) => callback(status)),
-  onBuiltInStatus: (callback) =>
-    ipcRenderer.on("builtin-status", (_, status) => callback(status)),
+  onExtractStatus: (callback) => {
+    const listener = (_, status) => callback(status);
+    ipcRenderer.on("extract-status", listener);
+    return () => {
+      ipcRenderer.removeListener("extract-status", listener);
+    };
+  },
+  onBuiltInStatus: (callback) => {
+    const listener = (_, status) => callback(status);
+    ipcRenderer.on("builtin-status", listener);
+    return () => {
+      ipcRenderer.removeListener("builtin-status", listener);
+    };
+  },
   builtInTranslation: ({ gamePath, engine }) =>
     ipcRenderer.invoke("built-in-translation", { gamePath, engine }), //选择游戏
   loadJson: () => ipcRenderer.invoke("load-json"), //加载翻译文件

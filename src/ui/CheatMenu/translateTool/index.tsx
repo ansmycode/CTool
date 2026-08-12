@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button, Space, Tooltip, Modal, notification } from "antd";
 import ExtractModal from "@/components/ExtractModal";
+import AITranslation from "@/ui/AITranslation";
 import "./index.css";
 
 interface Props {
@@ -94,15 +95,17 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
     }
   };
 
-  window.electronAPI.onBuiltInStatus((res) => {
-    if (!res) return;
-    setBuiltState(res.status);
-  });
+  useEffect(() => {
+    return window.electronAPI.onBuiltInStatus((res) => {
+      if (!res) return;
+      setBuiltState(res.status);
+    });
+  }, []);
 
   return (
-    <div>
+    <div className="translate-tool">
       {contextHolder}
-      <Space>
+      <Space className="translate-tool-actions" wrap>
         <Button type="primary" onClick={onLoadTranslated}>
           加载翻译文件
         </Button>
@@ -119,6 +122,7 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
           自动内嵌文本
         </Button>
       </Space>
+      <AITranslation />
       <ExtractModal
         visible={extractModalShow}
         extractText={extractText}

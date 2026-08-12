@@ -1,5 +1,5 @@
 // App.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Layout, Button, message, Tabs } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 const { Content, Footer } = Layout;
@@ -34,13 +34,15 @@ const Main: React.FC = () => {
     handleLaunchGame(infoFromHistory);
   };
 
-  window.electronAPI.onReceiveMessage(
-    "game-closed",
-    (_: any, result: any) => {
-      setIsGameStarting(result.isGameStarting);
-      setGameInfo({});
-    }
-  );
+  useEffect(() => {
+    return window.electronAPI.onReceiveMessage(
+      "game-closed",
+      (_: unknown, result: any) => {
+        setIsGameStarting(result.isGameStarting);
+        setGameInfo({});
+      },
+    );
+  }, []);
 
   const tabsItems = [
     {
