@@ -10,7 +10,11 @@ const CheatMenu = lazy(() => import("../CheatMenu/index"));
 const GameHistory = lazy(() => import("@/ui/GameHistory"));
 const AuthorInfo = lazy(() => import("@/ui/AuthorInfo"));
 
-const pageFallback = <Spin size="large" />;
+const pageFallback = (
+  <div className="page-loading">
+    <Spin size="large" />
+  </div>
+);
 
 const Main: React.FC = () => {
   const [gameInfo, setGameInfo] = useState<any>({});
