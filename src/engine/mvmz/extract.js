@@ -5,7 +5,6 @@
 import fs from "fs";
 import path from "path";
 import { findFileOrDirWithDepthLimit } from "../../utils/tool.js";
-import archiver from "archiver";
 
 const keysToReplace = [
   "characterName",
@@ -175,6 +174,7 @@ export function replaceFromObject(obj, translationData) {
  * @returns {Promise<string>} 返回备份文件路径
  */
 export async function backup(sourcePaths, backupFile, format = "zip") {
+  const { default: archiver } = await import("archiver");
   const output = fs.createWriteStream(backupFile);
   const archive = archiver(format, { zlib: { level: 9 } });
 
