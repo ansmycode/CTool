@@ -41,12 +41,13 @@
   "build": {
     "appId": "com.ctool-cheat.app",
     "productName": "CTool",
-    "icon": "./desktopIcon.png",
+    "icon": "./logo.png",
     "files": [
       "src/electron/**/*",
       "src/engine/**/*",
       "src/utils/**/*",
       "dist-react/**/*",
+      "logo.png",
       "package.json"
     ],
     "electronLanguages": [
