@@ -4,19 +4,35 @@ const toolDataDir = path.join(process.cwd(), "tool_data");
 const historyFile = path.join(toolDataDir, "gameHistory.json");
 // 读取历史游玩记录 JSON 文件，若文件不存在则创建并保存默认记录
 export function readGameHistory() {
-  if (fs.existsSync(historyFile)) {
-    // 如果文件存在，读取内容并解析为 JSON
+  try {
+    // 确保 tool_data 目录存在
+    fs.mkdirSync(toolDataDir, { recursive: true });
+
+    // 文件不存在时，创建默认记录
+    if (!fs.existsSync(historyFile)) {
+      const defaultHistory = [];
+      fs.writeFileSync(
+        historyFile,
+        JSON.stringify(defaultHistory, null, 2),
+        "utf8",
+      );
+      return defaultHistory;
+    }
+
+    // 文件存在时读取并解析
     const fileContent = fs.readFileSync(historyFile, "utf8");
     return JSON.parse(fileContent);
+  } catch (error) {
+    console.error("读取游戏历史记录失败：", error);
+    return [];
   }
 }
-
 // 保存新的游戏历史记录到 JSON 文件
 export function saveGameHistory(newHistory) {
   // 先读取旧的记录
   const currentHistory = readGameHistory();
   const index = currentHistory.findIndex(
-    (item) => item.gamePath === newHistory.gamePath
+    (item) => item.gamePath === newHistory.gamePath,
   );
   if (index >= 0) {
     // 更新已有记录的最后游玩时间以及其他需要更新的信息
@@ -37,7 +53,7 @@ export function saveGameHistory(newHistory) {
   fs.writeFileSync(
     historyFile,
     JSON.stringify(currentHistory, null, 2),
-    "utf8"
+    "utf8",
   );
 }
 
@@ -46,14 +62,14 @@ export function deleteGameHistory(needDeletePath) {
   try {
     const currentHistory = readGameHistory();
     const filterHistory = currentHistory.filter(
-      (item) => item.gamePath !== needDeletePath
+      (item) => item.gamePath !== needDeletePath,
     );
     console.log("filterHistory", filterHistory);
     // 将更新后的历史记录写入文件
     fs.writeFileSync(
       historyFile,
       JSON.stringify(filterHistory, null, 2),
-      "utf8"
+      "utf8",
     );
     return { success: true };
   } catch (error) {
@@ -86,10 +102,7 @@ export async function backupDataFolder(gameDir, event) {
 
   event?.sender?.send("builtin-status", { status: "backup" });
 
-  const backupFile = await backup(
-    found.path,
-    path.join(gameDir, backupName)
-  );
+  const backupFile = await backup(found.path, path.join(gameDir, backupName));
 
   event?.sender?.send("builtin-status", { status: "backupend" });
 
@@ -104,7 +117,7 @@ export function findFileOrDirWithDepthLimit(
   dir,
   targetNames, // 可以是文件名或目录名
   maxDepth,
-  currentDepth = 0
+  currentDepth = 0,
 ) {
   if (currentDepth > maxDepth) return null;
 
@@ -144,7 +157,7 @@ export function findFileOrDirWithDepthLimit(
         fullPath,
         targetNames,
         maxDepth,
-        currentDepth + 1
+        currentDepth + 1,
       );
       if (found) return found;
     }

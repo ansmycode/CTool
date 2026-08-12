@@ -44,9 +44,11 @@ const GameHistory: React.FC<Props> = ({ historyLaunchGame }) => {
   return (
     <div className="game-history-page">
       {contextHolder}
-      <div className="game-history-header">这里保存着你使用该工具启动过的游戏</div>
+      <div className="game-history-header">
+        这里保存着你使用该工具启动过的游戏
+      </div>
       <div className="game-history-list">
-        {gameHistory.map((item) => (
+        {gameHistory?.map((item) => (
           <div key={item.gamePath} className="game-history-item">
             <Space size="middle" className="game-history-item-space">
               <Image
@@ -66,8 +68,12 @@ const GameHistory: React.FC<Props> = ({ historyLaunchGame }) => {
                 <div>第一次运行: {item.firstPlayed}</div>
                 <div>最后一次运行: {item.lastPlayed}</div>
                 <Space>
-                  <Button onClick={() => historyLaunchGame(item)}>启动游戏</Button>
-                  <Button onClick={() => openGameDir(item.gamePath)}>打开游戏位置</Button>
+                  <Button onClick={() => historyLaunchGame(item)}>
+                    启动游戏
+                  </Button>
+                  <Button onClick={() => openGameDir(item.gamePath)}>
+                    打开游戏位置
+                  </Button>
                   <Popconfirm
                     title="删除记录"
                     description="你确定要删除这条游玩记录吗?"
