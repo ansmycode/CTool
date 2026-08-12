@@ -11,6 +11,7 @@ node_modules
 dist
 dist-react
 dist-electron
+agent_work
 *.local
 
 # Editor directories and files
