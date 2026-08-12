@@ -11,6 +11,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const preloadPath = path.join(__dirname, "..", "preload.js");
+const iconPath = path.join(app.getAppPath(), "logo.png");
 
 export function createMainWindow() {
   const mainWindow = new BrowserWindow({
@@ -20,6 +21,7 @@ export function createMainWindow() {
     maximizable: false,
     fullscreenable: false,
     title: "CatTool",
+    icon: iconPath,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
