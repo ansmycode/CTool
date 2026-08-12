@@ -49,6 +49,15 @@ body,
   flex-direction: column;
 }
 
+/* 懒加载页面首次读取时，将加载提示置于内容区域中央。 */
+.page-loading {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .tool-gameinfo {
   margin: 12px 3rem;
 }
