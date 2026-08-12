@@ -1,8 +1,14 @@
-.table-container {
+.translate-tool {
     display: flex;
     flex: 1;
     min-height: 0;
     flex-direction: column;
-    overflow: hidden;
+    gap: 18px;
+    padding: 2px 4px 24px;
+    overflow: auto;
+}
+
+.translate-tool-actions {
+    flex: none;
 }
 

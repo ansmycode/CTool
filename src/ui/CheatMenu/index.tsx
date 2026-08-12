@@ -80,12 +80,14 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     }
   }, [getGameDataWithNotify]);
 
-  window.electronAPI.onReceiveMessage(
-    "game-ready",
-    (_: any, result: any) => {
-      setGameReady(result)
-    }
-  );
+  useEffect(() => {
+    return window.electronAPI.onReceiveMessage(
+      "game-ready",
+      (_: unknown, result: any) => {
+        setGameReady(result);
+      },
+    );
+  }, []);
 
   // const getGameDataWithNotify = async () => {
   //   const notifyKey = "get-game-data";

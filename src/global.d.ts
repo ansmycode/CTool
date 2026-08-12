@@ -1,4 +1,4 @@
-export { };
+export {};
 
 declare global {
   interface Window {
@@ -8,20 +8,20 @@ declare global {
         textArr: string[];
         gameInfo: any;
       }) => Promise<void>;
-      onExtractStatus: (callback: (status: any) => void) => void;
-      onBuiltInStatus: (callback: (status: any) => void) => void;
+      onExtractStatus: (callback: (status: any) => void) => () => void;
+      onBuiltInStatus: (callback: (status: any) => void) => () => void;
       builtInTranslation: (args: {
         gamePath: string | null;
         engine: string | null;
       }) => Promise<void>;
       loadJson: () => Promise<void>;
-      readGameHistory: () => Promise<void>;
+      readGameHistory: () => Promise<any[]>;
       openGameDir: (gamePath: string) => Promise<void>;
       deleteGameHistory: (gamePath: string) => Promise<void>;
       onReceiveMessage: (
         channel: string,
-        callback: (event: unknown, data: any) => void
-      ) => void;
+        callback: (event: unknown, data: any) => void,
+      ) => () => void;
       test: () => Promise<void>;
     };
   }
