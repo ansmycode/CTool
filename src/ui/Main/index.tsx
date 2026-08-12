@@ -1,13 +1,16 @@
 // App.tsx
-import React, { useEffect, useState } from "react";
-import { Layout, Button, message, Tabs } from "antd";
+import React, { lazy, Suspense, useEffect, useState } from "react";
+import { Layout, Button, message, Spin, Tabs } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 const { Content, Footer } = Layout;
-import CheatMenu from "../CheatMenu/index";
-import GameHistory from "@/ui/GameHistory";
-import AuthorInfo from '@/ui/AuthorInfo';
 
 import "./index.css";
+
+const CheatMenu = lazy(() => import("../CheatMenu/index"));
+const GameHistory = lazy(() => import("@/ui/GameHistory"));
+const AuthorInfo = lazy(() => import("@/ui/AuthorInfo"));
+
+const pageFallback = <Spin size="large" />;
 
 const Main: React.FC = () => {
   const [gameInfo, setGameInfo] = useState<any>({});
@@ -100,17 +103,19 @@ const Main: React.FC = () => {
       <Content
         className="tool-content"
       >
-        {isGameStarting ? (
-          <CheatMenu isGameStarting={isGameStarting} gameInfo={gameInfo} />
-        ) : (
-          <Tabs
-            className="tool-tabs"
-            activeKey={activeKey}
-            onChange={setActiveKey}
-            items={tabsItems}
-            type="card"
-          />
-        )}
+        <Suspense fallback={pageFallback}>
+          {isGameStarting ? (
+            <CheatMenu isGameStarting={isGameStarting} gameInfo={gameInfo} />
+          ) : (
+            <Tabs
+              className="tool-tabs"
+              activeKey={activeKey}
+              onChange={setActiveKey}
+              items={tabsItems}
+              type="card"
+            />
+          )}
+        </Suspense>
       </Content>
       <Footer className="layout-footer" style={{ textAlign: "center" }}>
         CTool v0.0.1

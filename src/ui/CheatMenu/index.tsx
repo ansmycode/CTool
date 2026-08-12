@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Tabs, notification } from "antd";
+import React, { lazy, Suspense, useState, useEffect, useCallback } from "react";
+import { Tabs, notification, Spin } from "antd";
 import ArmorTable from "./armorTable/index";
 import Home from "./home/index";
 import WeaponTable from "./weaponTable/index";
@@ -7,12 +7,13 @@ import SwitchesTable from "./switchesTable/index";
 import VariablesTable from "./variablesTable/index";
 import ItemsTable from "./itemsTable/index";
 import ActorTable from "./actorTable/index";
-import TranslateTool from "./translateTool/index";
 import { useGameData } from "@/components/useGameData";
 import type { TabsProps } from "antd";
 import { LoadingOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import LoadingOverlay from '@/components/LoadingOverlay';
 import "./index.css";
+
+const TranslateTool = lazy(() => import("./translateTool/index"));
 
 interface GameProps {
   isGameStarting: boolean;
@@ -204,10 +205,12 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
       key: "8",
       label: "翻译",
       children: (
-        <TranslateTool
-          gameInfo={gameInfo}
-          sendTranslationData={sendTranslationData}
-        />
+        <Suspense fallback={<Spin size="large" />}>
+          <TranslateTool
+            gameInfo={gameInfo}
+            sendTranslationData={sendTranslationData}
+          />
+        </Suspense>
       ),
       className: 'tab-pane-fullheight', // ← 关键
     },
