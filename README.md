@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./desktopIcon.png" width="112" alt="CTool 图标">
+  <img src="./logo.png" width="112" alt="CTool 图标">
 </p>
 
 <h1 align="center">CTool</h1>
