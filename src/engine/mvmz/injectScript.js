@@ -6,12 +6,12 @@ import { findFileOrDirWithDepthLimit } from "../../utils/tool.js";
 function copyInjectScriptToGame(gameDir, file) {
     try {
         // 1. 获取当前应用路径
-        const appPath = app.isPackaged
-            ? path.join(process.resourcesPath, "app") // 打包后的路径
-            : app.getAppPath(); // dev 模式路径
-        console.log("appPath", appPath);
+        const injectDir = app.isPackaged
+            ? path.join(process.resourcesPath, "inject") // 打包后使用外置资源目录
+            : path.join(app.getAppPath(), "inject"); // dev 模式使用项目目录
+        console.log("injectDir", injectDir);
         // 2. 源文件路径
-        const sourceFile = path.join(appPath, "inject", file);
+        const sourceFile = path.join(injectDir, file);
         console.log("sourceFile", sourceFile);
         // 3. 目标文件路径
         const jsDir = path.join(gameDir, "www", "js");

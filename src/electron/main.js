@@ -109,7 +109,11 @@ app.on("ready", () => {
     },
   });
   // mainWindow.setMenu(null); //关闭原始自带的菜单
-  mainWindow.loadFile(path.join(app.getAppPath(), "dist-react", "index.html"));
+  if (app.isPackaged) {
+    mainWindow.loadFile(path.join(app.getAppPath(), "dist-react", "index.html"));
+  } else {
+    mainWindow.loadURL("http://127.0.0.1:5173");
+  }
   createServer(mainWindow);
 });
 
