@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Table, Input } from "antd";
+import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
 
 interface Props {
   variables: any;
@@ -12,6 +13,7 @@ interface Item {
 }
 
 const VariablesTable: React.FC<Props> = ({ variables, changeVariables }) => {
+  const { containerRef, scrollY } = useTableScrollY();
   const [listData, setlistData] = useState(variables);
   useEffect(() => {
     setlistData(variables);
@@ -59,13 +61,13 @@ const VariablesTable: React.FC<Props> = ({ variables, changeVariables }) => {
     },
   ];
   return (
-    <div>
+    <div ref={containerRef} className="table-container">
       <Table
         columns={columns}
         dataSource={listData}
         rowKey="id"
         pagination={false}
-        scroll={{ y: '70vh' }} // 设置高度，启用虚拟滚动
+        scroll={{ y: scrollY }}
         size="small"
       />
     </div>

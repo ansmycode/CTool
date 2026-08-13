@@ -10,13 +10,7 @@ function App() {
     return <FakeGamePreview />;
   }
 
-  return (
-    <>
-      <div>
-        <Main />
-      </div>
-    </>
-  )
+  return <Main />;
 }
 
 export default App

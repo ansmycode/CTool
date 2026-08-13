@@ -4,7 +4,7 @@
 区分 Vite 开发地址与生产文件
 */
 
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, screen } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -13,10 +13,30 @@ const __dirname = path.dirname(__filename);
 const preloadPath = path.join(__dirname, "..", "preload.js");
 const iconPath = path.join(app.getAppPath(), "logo.png");
 
+const BASE_WINDOW_WIDTH = 1080;
+const BASE_WINDOW_HEIGHT = 720;
+const MAX_WINDOW_SCALE = 1.12;
+
+function getAdaptiveWindowSize() {
+  const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const { width: workWidth, height: workHeight } = display.workAreaSize;
+  const scale = Math.min(
+    (workWidth * 0.82) / BASE_WINDOW_WIDTH,
+    (workHeight * 0.86) / BASE_WINDOW_HEIGHT,
+    MAX_WINDOW_SCALE,
+  );
+
+  return {
+    width: Math.round(BASE_WINDOW_WIDTH * scale),
+    height: Math.round(BASE_WINDOW_HEIGHT * scale),
+  };
+}
+
 export function createMainWindow() {
+  const windowSize = getAdaptiveWindowSize();
   const mainWindow = new BrowserWindow({
-    width: 1020,
-    height: 680,
+    ...windowSize,
+    center: true,
     resizable: false,
     maximizable: false,
     fullscreenable: false,

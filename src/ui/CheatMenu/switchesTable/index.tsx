@@ -1,5 +1,6 @@
 import React from "react";
 import { Table, Switch } from "antd";
+import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
 
 interface Props {
   switches: any;
@@ -12,6 +13,7 @@ interface Item {
 }
 
 const SwitchesTable: React.FC<Props> = ({ switches, changeSwitches }) => {
+  const { containerRef, scrollY } = useTableScrollY();
   const switchChange = (id: number, value: boolean) => {
     changeSwitches(id, value);
   };
@@ -43,13 +45,13 @@ const SwitchesTable: React.FC<Props> = ({ switches, changeSwitches }) => {
     },
   ];
   return (
-    <div>
+    <div ref={containerRef} className="table-container">
       <Table
         columns={columns}
         dataSource={switches}
         rowKey="id"
         pagination={false}
-        scroll={{ y: '70vh' }} // 设置高度，启用虚拟滚动
+        scroll={{ y: scrollY }}
         size="small"
       />
     </div>

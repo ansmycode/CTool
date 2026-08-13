@@ -1,14 +1,27 @@
 .translate-tool {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    flex-direction: column;
-    gap: 18px;
-    padding: 2px 4px 24px;
-    overflow: auto;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 20px 12px;
+  overflow: hidden;
+  background: #f7f8fa;
+}
+
+.translate-tool-header {
+  margin-bottom: 0;
 }
 
 .translate-tool-actions {
-    flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 7px 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
 }
-

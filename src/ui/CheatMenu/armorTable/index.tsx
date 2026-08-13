@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Table, InputNumber } from "antd";
+import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
 
 interface Props {
   ArmorsData: any;
@@ -12,6 +13,7 @@ interface Item {
 }
 
 const ArmorTable: React.FC<Props> = ({ ArmorsData, handleGainItem }) => {
+  const { containerRef, scrollY } = useTableScrollY();
   const [listData, setlistData] = useState(ArmorsData);
   useEffect(() => {
     setlistData(ArmorsData);
@@ -61,13 +63,13 @@ const ArmorTable: React.FC<Props> = ({ ArmorsData, handleGainItem }) => {
     },
   ];
   return (
-    <div>
+    <div ref={containerRef} className="table-container">
       <Table
         columns={columns}
         dataSource={listData}
         rowKey="id"
         pagination={false}
-        scroll={{ y: '70vh' }} // 设置高度，启用虚拟滚动
+        scroll={{ y: scrollY }}
         size="small"
       />
     </div>

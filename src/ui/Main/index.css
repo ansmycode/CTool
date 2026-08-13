@@ -1,37 +1,73 @@
-/* src/ui/main/main.css */
-html,
-body,
-#root {
+.app-layout {
+  display: flex;
   width: 100%;
   height: 100%;
-  margin: 0;
-  padding: 0;
+  min-height: 0;
+  flex-direction: column;
   overflow: hidden;
-  background-color: #f0f2f5;
-  /* AntD 默认背景 */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* .ant-layout {
-  height: 100%;
-} */
-
-.app-layout {
-  height: 100vh;
+.tool-content {
   display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
   flex-direction: column;
+  padding: 8px 1rem;
+  overflow: hidden;
+}
+
+.layout-footer {
+  flex: 0 0 auto;
+  padding: 8px 24px;
+  text-align: center;
+}
+
+.page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+}
+
+.tool-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tool-tabs > .ant-tabs-nav {
+  flex: 0 0 auto;
+}
+
+.tool-tabs .ant-tabs-content-holder,
+.tool-tabs .ant-tabs-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tool-tabs .ant-tabs-tabpane-active {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .drop-zone {
-  border: 2px dashed #1890ff;
-  background: #fafafa;
   padding: 40px;
   margin: 12px 3rem;
-  text-align: center;
-  border-radius: 8px;
   color: #1890ff;
   font-size: 18px;
+  text-align: center;
   cursor: pointer;
+  background: #fafafa;
+  border: 2px dashed #1890ff;
+  border-radius: 8px;
   transition: background 0.3s;
 }
 
@@ -39,75 +75,11 @@ body,
   background: #e6f7ff;
 }
 
-.tool-content {
-  padding: 8px 1rem;
-  flex: 1;
-  /* 占满剩余高度 */
-  min-height: 0;
-  /* 防止 flex 子元素塌陷 */
-  display: flex;
-  flex-direction: column;
-}
-
-/* 懒加载页面首次读取时，将加载提示置于内容区域中央。 */
-.page-loading {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .tool-gameinfo {
   margin: 12px 3rem;
 }
-
 
 .tab-main {
   width: 200px;
   text-align: center;
 }
-
-
-.layout-footer {
-  text-align: center;
-  padding: 12px 24px;
-}
-
-.tool-tabs {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow-y: auto;
-
-}
-
-.tool-tabs .ant-tabs-content-holder {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-.tool-tabs .ant-tabs-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.tool-tabPane {
-  flex: 1;
-  min-height: 0;
-  min-height: 0;
-}
-
-/* .tool-tabs .ant-tabs-tabpane {
-  display: none;
-}
-
-.tool-tabs .ant-tabs-tabpane-active {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-} */
