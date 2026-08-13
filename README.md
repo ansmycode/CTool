@@ -90,16 +90,28 @@ npm run dev
 
 ```text
 src/
-├─ electron/          Electron 主进程、预加载脚本与本地状态服务
-├─ engine/mvmz/       MV/MZ 注入、文本提取与写入逻辑
-├─ components/        通用组件与引擎适配器
-├─ service/           与游戏内本地 API 通信
-├─ ui/                React 界面
-└─ utils/             引擎检测、历史记录与文件工具
-inject/               注入游戏的修改与翻译脚本
+├─ electron/              Electron 主进程、窗口、IPC 与业务服务
+│  ├─ ipc/                渲染进程调用入口
+│  ├─ services/           检测、注入、翻译和历史记录服务
+│  └─ window/             BrowserWindow 创建与开发/生产加载策略
+├─ engine/mvmz/           MV/MZ 游戏文件处理、注入和文本提取逻辑
+├─ game/                  渲染进程的统一游戏数据层
+│  ├─ adapters/mvmz.ts    MV/MZ 通信、原始字段转换与能力声明
+│  ├─ registry.ts         游戏引擎与 Adapter 的注册关系
+│  ├─ types.ts            CTool 统一游戏数据和能力类型
+│  └─ useGameData.ts      React 游戏状态、操作分发与刷新
+├─ lib/http.ts            与具体引擎无关的 HTTP 请求工具
+├─ components/            可复用的 React 公共组件
+├─ ui/                    页面与功能界面
+│  └─ CheatMenu/          能力驱动的修改菜单与懒加载 Tab 注册表
+└─ utils/                 引擎检测、历史记录与文件工具
+inject/                   注入游戏的修改与翻译脚本
+docs/                     架构与功能计划文档
 ```
 
-运行链路大致如下：
+架构分为两条主要链路。
+
+Electron 负责选择游戏、检测引擎、修改游戏文件并启动游戏：
 
 ```text
 选择 Game.exe
@@ -109,6 +121,18 @@ inject/               注入游戏的修改与翻译脚本
   → 启动游戏
   → CTool 通过 localhost 与游戏交换数据
 ```
+
+进入 CheatMenu 后，React 页面不直接兼容各引擎的原始字段，而是使用统一数据层：
+
+```text
+CheatMenu
+  → useGameData 管理状态并在修改后刷新
+  → registry 根据引擎选择 Adapter
+  → Adapter 调用游戏 API 并转换原始字段
+  → http.ts 与游戏中的注入服务通信
+```
+
+例如 MV/MZ 返回的 `allItem`、`allMembers` 会在 Adapter 中转换为统一的 `items`、`actors`。CheatMenu 只使用统一字段和能力集合，不需要判断当前具体是哪一种引擎。不同引擎不支持的页面，可由 Adapter 声明的能力决定是否显示；各个 CheatMenu Tab 也会在第一次访问时按需加载。
 
 ## 已知问题与风险
 
@@ -124,6 +148,7 @@ inject/               注入游戏的修改与翻译脚本
 
 - 提高文本提取与内嵌翻译的完整性和稳定性
 - 接入用户自备 API Key 的 AI 批量翻译（详见 [AI 翻译功能计划书](./docs/AI_TRANSLATION_PLAN.md)）
+- 增加仅开发环境可用的页面快速预览入口（详见 [开发页面预览计划](./docs/DEV_PAGE_PREVIEW_PLAN.md)）
 - 适配更多旧版 RPG Maker 引擎
 - 研究 Wolf RPG Editor 支持
 - 持续修复兼容性问题并改善使用体验
@@ -134,4 +159,6 @@ inject/               注入游戏的修改与翻译脚本
 
 ## 免责声明
 
+本项目仅对作者在官方仓库及官方指定渠道发布的版本负责。第三方 Fork、修改、重新打包、镜像或分发的版本不属于官方版本，其内容、行为与安全性不受作者控制。对于用户从非官方渠道取得或运行的版本，作者在适用法律允许的最大范围内不提供任何保证，也不承担由第三方修改、分发或使用所造成的责任。  
+本项目仅授权非商业使用。任何直接或间接以营利、收费、广告变现、付费服务、商业推广或获取商业利益为目的的使用，均须事先取得作者书面商业授权。
 本工具仅供学习、研究和个人用途。请遵守游戏许可协议及当地法律，不得将其用于破坏他人数据、绕过付费机制、网络游戏作弊或其他违法用途。因使用本工具造成的游戏文件、存档或其他数据损失，由使用者自行承担。
