@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Table, InputNumber, Checkbox, Input, Select, Card, Form } from "antd";
+import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
 
 interface Props {
   actorData: any[];
@@ -37,6 +38,7 @@ const ActorTable: React.FC<Props> = ({
   classData,
   setActorData,
 }) => {
+  const { containerRef, scrollY } = useTableScrollY();
   const [listData, setListData] = useState(actorData);
   const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
   const [form] = Form.useForm();
@@ -149,13 +151,13 @@ const ActorTable: React.FC<Props> = ({
   ];
 
   return (
-    <div className="table-container">
+    <div ref={containerRef} className="table-container">
       <Table
         columns={columns}
         dataSource={listData}
         rowKey="id"
         pagination={false}
-        scroll={{ y: "70vh" }}
+        scroll={{ y: scrollY }}
         size="small"
         expandable={{
           expandedRowKeys: expandedKeys,

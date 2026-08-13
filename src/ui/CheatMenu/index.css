@@ -1,42 +1,96 @@
-.cheat-menu {
-  display: flex;
-  flex: 1;
-  min-height: 0; 
-  flex-direction: column;
-}
-
-.cheat-menu-tabs {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
+.cheat-menu,
+.cheat-menu-tabs,
 .tab-pane-fullheight {
+  display: flex;
   flex: 1;
   min-height: 0;
-  display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.cheat-menu-tabs > .ant-tabs-nav {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 10px 20px 0;
+  background: #f5f7fa;
+}
+
+.cheat-menu-tabs.ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
+  padding: 9px 18px;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 9px 9px 0 0;
+}
+
+.cheat-menu-tabs.ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active {
+  background: #fff;
+  border-color: #e5eaf0;
+  border-bottom-color: #fff;
 }
 
 .cheat-menu-page-loading {
-  flex: 1;
-  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.cheat-menu-tabs .ant-tabs-content-holder {
-  display: flex;
-  flex-direction: column;
   flex: 1;
   min-height: 0;
 }
 
+.cheat-menu-tabs .ant-tabs-content-holder,
 .cheat-menu-tabs .ant-tabs-content {
-  flex: 1;
   display: flex;
-  flex-direction: column;
+  flex: 1;
   min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cheat-menu-tabs .ant-tabs-tabpane-active {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.table-container {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-container > .ant-table-wrapper {
+  flex: 1;
+  min-height: 0;
+}
+
+.tool-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto 8px;
+}
+
+.tool-page-header .ant-typography {
+  margin: 0;
+}
+
+.tool-page-header h3.ant-typography {
+  margin-bottom: 1px;
+  font-size: 18px;
+}
+
+.tool-page-header .ant-typography-secondary {
+  font-size: 12px;
+}
+
+@media (max-width: 620px) {
+  .tool-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

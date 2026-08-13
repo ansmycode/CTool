@@ -74,9 +74,8 @@ const AITranslation: React.FC = () => {
       className="ai-translation-card"
       title={
         <div className="ai-translation-title">
-          <span className="ai-translation-title-mark">AI</span>
           <span>
-            <Typography.Text strong>AI 翻译</Typography.Text>
+            <Typography.Text strong>AI 翻译配置</Typography.Text>
             <Typography.Text type="secondary" className="ai-translation-subtitle">
               将已提取的 JSON 文本翻译为指定语言
             </Typography.Text>
@@ -97,13 +96,14 @@ const AITranslation: React.FC = () => {
         <Form.Item label="原始 JSON" className="ai-file-field">
           <Space.Compact block>
             <Input
+              size="small"
               readOnly
               placeholder="请选择 CTool 已提取的 JSON 文件"
               aria-label="原始 JSON 文件路径"
             />
             <Tooltip title="文件选择将在下一步接入">
               <span>
-                <Button disabled>选择文件</Button>
+                <Button size="small" disabled>选择文件</Button>
               </span>
             </Tooltip>
           </Space.Compact>
@@ -116,6 +116,7 @@ const AITranslation: React.FC = () => {
           <Col xs={24} md={8}>
             <Form.Item label="服务商" name="provider">
               <Select
+                size="small"
                 options={PROVIDERS.map(({ value, label }) => ({ value, label }))}
                 onChange={handleProviderChange}
               />
@@ -124,6 +125,7 @@ const AITranslation: React.FC = () => {
           <Col xs={24} md={16}>
             <Form.Item label="API 地址" name="baseUrl">
               <Input
+                size="small"
                 placeholder={provider === "custom" ? "请输入兼容接口地址" : "API 地址"}
                 autoComplete="off"
               />
@@ -135,6 +137,7 @@ const AITranslation: React.FC = () => {
           <Col xs={24} md={12}>
             <Form.Item label="API Key" name="apiKey">
               <Input.Password
+                size="small"
                 placeholder="仅在本次运行期间使用"
                 autoComplete="new-password"
               />
@@ -143,6 +146,7 @@ const AITranslation: React.FC = () => {
           <Col xs={24} md={12}>
             <Form.Item label="模型" name="model">
               <Select
+                size="small"
                 disabled
                 placeholder="待确定并测试首批模型"
                 notFoundContent="首批测试模型尚未确定"
@@ -155,6 +159,7 @@ const AITranslation: React.FC = () => {
           <Col xs={24} md={12}>
             <Form.Item label="源语言" name="sourceLanguage">
               <Select
+                size="small"
                 showSearch
                 optionFilterProp="label"
                 options={LANGUAGE_OPTIONS}
@@ -164,6 +169,7 @@ const AITranslation: React.FC = () => {
           <Col xs={24} md={12}>
             <Form.Item label="目标语言" name="targetLanguage">
               <Select
+                size="small"
                 showSearch
                 optionFilterProp="label"
                 options={LANGUAGE_OPTIONS}
@@ -186,12 +192,12 @@ const AITranslation: React.FC = () => {
           <Space>
             <Tooltip title="连接测试将在下一步接入">
               <span>
-                <Button disabled>测试连接</Button>
+                <Button size="small" disabled>测试连接</Button>
               </span>
             </Tooltip>
             <Tooltip title="翻译逻辑将在后续步骤接入">
               <span>
-                <Button type="primary" disabled>
+                <Button size="small" type="primary" disabled>
                   开始翻译
                 </Button>
               </span>

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { InputNumber, Button, Switch, Tooltip, Space } from "antd";
+import React, { useEffect, useState } from "react";
+import { Button, InputNumber, Switch, Tooltip, Typography } from "antd";
 import type { GameData } from "@/game/types";
 import "./index.css";
 
@@ -8,8 +8,42 @@ interface Props {
   getGameData: () => void;
   handleAchieveVictory: () => void;
   modifyGold: (amount: number) => void;
-  setSomeGameSettings: (type: string, value: any) => Promise<void>;
+  setSomeGameSettings: (type: string, value: unknown) => Promise<void>;
 }
+
+interface SettingSwitchProps {
+  title: string;
+  description: string;
+  checked?: boolean;
+  tooltip?: string;
+  onChange: (checked: boolean) => void;
+}
+
+const SettingSwitch: React.FC<SettingSwitchProps> = ({
+  title,
+  description,
+  checked,
+  tooltip,
+  onChange,
+}) => {
+  const content = (
+    <div className="home-setting-row">
+      <span className="home-setting-copy">
+        <Typography.Text strong>{title}</Typography.Text>
+        <Typography.Text type="secondary">{description}</Typography.Text>
+      </span>
+      <Switch
+        size="small"
+        checkedChildren="开"
+        unCheckedChildren="关"
+        checked={checked}
+        onChange={onChange}
+      />
+    </div>
+  );
+
+  return tooltip ? <Tooltip title={tooltip}>{content}</Tooltip> : content;
+};
 
 const Home: React.FC<Props> = ({
   rpgGameData,
@@ -25,92 +59,136 @@ const Home: React.FC<Props> = ({
   }, [rpgGameData]);
 
   return (
-    <div>
-      <div>
-        <Space>
-          <InputNumber
-            className="general-input"
-            addonBefore="Gold"
-            min={0}
-            precision={0}
-            stringMode={false}
-            step={1}
-            value={data?.gold || 0}
-            onChange={(value: number | null) => {
-              if (value)
-                setData((prev) => (prev ? { ...prev, gold: value } : prev));
-            }}
-            onBlur={(e) => {
-              if (Number(e.target.value)) {
-                modifyGold(Number(e.target.value));
-              }
-            }}
+    <div className="home-page">
+      <header className="tool-page-header">
+        <div>
+          <Typography.Title level={3}>游戏控制台</Typography.Title>
+          <Typography.Text type="secondary">
+            调整常用游戏数据与运行设置
+          </Typography.Text>
+        </div>
+        <Button size="small" onClick={getGameData}>
+          刷新游戏数据
+        </Button>
+      </header>
+
+      <section className="home-section">
+        <div className="tool-section-heading">
+          <div>
+            <Typography.Title level={4}>常用数据</Typography.Title>
+            <Typography.Text type="secondary">修改后离开输入框即可应用</Typography.Text>
+          </div>
+        </div>
+        <div className="home-value-grid">
+          <div className="home-value-card">
+            <div className="home-value-content">
+              <Typography.Text>持有金币</Typography.Text>
+              <InputNumber
+                className="home-value-input"
+                min={0}
+                precision={0}
+                stringMode={false}
+                step={1}
+                value={data?.gold || 0}
+                onChange={(value: number | null) => {
+                  if (value !== null) {
+                    setData((prev) => (prev ? { ...prev, gold: value } : prev));
+                  }
+                }}
+                onBlur={(event) => {
+                  const value = Number(event.target.value);
+                  if (Number.isFinite(value)) modifyGold(value);
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="home-value-card">
+            <div className="home-value-content">
+              <Typography.Text>移动速度</Typography.Text>
+              <InputNumber
+                className="home-value-input"
+                min={0}
+                precision={0}
+                stringMode={false}
+                step={1}
+                value={data?.playerSpeed || 0}
+                onChange={(value: number | null) => {
+                  if (value !== null) {
+                    setData((prev) =>
+                      prev ? { ...prev, playerSpeed: value } : prev,
+                    );
+                  }
+                }}
+                onBlur={(event) => {
+                  const value = Number(event.target.value);
+                  if (Number.isFinite(value)) {
+                    setSomeGameSettings("playerSpeed", value);
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="home-section">
+        <div className="tool-section-heading">
+          <div>
+            <Typography.Title level={4}>游戏设置</Typography.Title>
+            <Typography.Text type="secondary">开关会立即发送到当前游戏</Typography.Text>
+          </div>
+        </div>
+        <div className="home-settings-card">
+          <SettingSwitch
+            title="随机遇敌"
+            description="控制地图移动时是否触发战斗"
+            checked={data?.isEncounterEnabled}
+            tooltip="部分游戏可能不会响应此设置"
+            onChange={(checked) =>
+              setSomeGameSettings("isEncounterEnabled", checked)
+            }
           />
-          <InputNumber
-            className="general-input"
-            addonBefore="移动速度"
-            min={0}
-            precision={0}
-            stringMode={false}
-            step={1}
-            value={data?.playerSpeed || 0}
-            onChange={(value: number | null) => {
-              if (value)
-                setData((prev) =>
-                  prev ? { ...prev, playerSpeed: value } : prev
-                );
-            }}
-            onBlur={(e) => {
-              if (Number(e.target.value)) {
-                setSomeGameSettings("playerSpeed", Number(e.target.value));
-              }
-            }}
+          <SettingSwitch
+            title="队伍整编"
+            description="允许在菜单中调整出战队伍"
+            checked={data?.isFormationEnabled}
+            tooltip="部分没有队伍展示的游戏不建议开启"
+            onChange={(checked) =>
+              setSomeGameSettings("isFormationEnabled", checked)
+            }
           />
-        </Space>
-      </div>
-      <div>
-        <Space>
-          <Tooltip title="决定你是否会在野外遇到敌人,部分游戏并不会起效.">
-            <span>遇敌</span>
-            <Switch
-              checkedChildren="开"
-              unCheckedChildren="关"
-              checked={data?.isEncounterEnabled}
-              onChange={(checked) => {
-                setSomeGameSettings("isEncounterEnabled", checked);
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="部分游戏没有人物队伍的展示,所以最好不要用这个功能">
-            <span>整队</span>
-            <Switch
-              checkedChildren="开"
-              unCheckedChildren="关"
-              checked={data?.isFormationEnabled}
-              onChange={(checked) => {
-                setSomeGameSettings("isFormationEnabled", checked);
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="">
-            <span>穿墙</span>
-            <Switch
-              checkedChildren="开"
-              unCheckedChildren="关"
-              checked={data?.through}
-              onChange={(checked) => {
-                setSomeGameSettings("through", checked);
-              }}
-            />
-          </Tooltip>
+          <SettingSwitch
+            title="穿墙模式"
+            description="忽略地图碰撞并自由移动"
+            checked={data?.through}
+            onChange={(checked) => setSomeGameSettings("through", checked)}
+          />
+        </div>
+      </section>
+
+      <section className="home-section">
+        <div className="tool-section-heading">
+          <div>
+            <Typography.Title level={4}>快捷操作</Typography.Title>
+            <Typography.Text type="secondary">需要特定游戏状态的即时指令</Typography.Text>
+          </div>
+        </div>
+        <div className="home-action-grid">
           <Tooltip title="需处于战斗状态">
-            <Button onClick={handleAchieveVictory}>战斗取得胜利</Button>
+            <Button
+              className="home-action-card"
+              size="small"
+              onClick={handleAchieveVictory}
+            >
+              战斗取得胜利
+            </Button>
           </Tooltip>
-          <Tooltip title="如果你发现工具里的游戏数据与游戏中对不上可以尝试点击此按钮手动刷新数据">
-            <Button onClick={getGameData}>手动获取数据</Button>
-          </Tooltip>
-        </Space>
-      </div>
+          <div className="home-future-slot" aria-label="后续功能预留区域">
+            后续功能预留
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

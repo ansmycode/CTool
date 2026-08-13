@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, Space, Tooltip, Modal, notification } from "antd";
+import { Button, Tooltip, Modal, notification, Typography } from "antd";
 import ExtractModal from "@/components/ExtractModal";
 import AITranslation from "@/ui/AITranslation";
 import "./index.css";
@@ -105,23 +105,34 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
   return (
     <div className="translate-tool">
       {contextHolder}
-      <Space className="translate-tool-actions" wrap>
-        <Button type="primary" onClick={onLoadTranslated}>
+      <header className="tool-page-header translate-tool-header">
+        <div>
+          <Typography.Title level={3}>翻译工具</Typography.Title>
+          <Typography.Text type="secondary">
+            提取、加载或内嵌游戏文本，并使用 AI 生成译文
+          </Typography.Text>
+        </div>
+      </header>
+      <div className="translate-tool-actions">
+        <Button size="small" onClick={onLoadTranslated}>
           加载翻译文件
         </Button>
         <Tooltip title="提取不是很全,没有对js脚本中的文本做适配">
           <Button
+            size="small"
             onClick={handleExtractText}
-            type="primary"
             loading={extractLoading}
           >
             提取文本
           </Button>
         </Tooltip>
-        <Button type="primary" onClick={() => setBuiltModalShow(true)}>
+        <Button
+          size="small"
+          onClick={() => setBuiltModalShow(true)}
+        >
           自动内嵌文本
         </Button>
-      </Space>
+      </div>
       <AITranslation />
       <ExtractModal
         visible={extractModalShow}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Table, InputNumber } from "antd";
+import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
 import "./index.css";
 
 
@@ -14,6 +15,7 @@ interface Item {
 }
 
 const ItemTable: React.FC<Props> = ({ ItemsData, handleGainItem }) => {
+  const { containerRef, scrollY } = useTableScrollY();
   const [listData, setlistData] = useState(ItemsData);
   useEffect(() => {
     setlistData(ItemsData);
@@ -63,14 +65,14 @@ const ItemTable: React.FC<Props> = ({ ItemsData, handleGainItem }) => {
     },
   ];
   return (
-    <div className="table-container">
+    <div ref={containerRef} className="table-container">
       <Table
         className="menu-table"
         columns={columns}
         dataSource={listData}
         rowKey="id"
         pagination={false}
-        scroll={{ y: '70vh' }}
+        scroll={{ y: scrollY }}
         size="small"
       />
     </div>

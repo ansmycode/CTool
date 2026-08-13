@@ -1,3 +1,132 @@
-.general-input{
-  width:160px;
+.home-page {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 20px 12px;
+  overflow: hidden;
+  color: #1f1f1f;
+  background: #f7f8fa;
+}
+
+.home-section {
+  max-width: 1040px;
+  margin: 0 auto 12px;
+}
+
+.tool-section-heading {
+  margin-bottom: 8px;
+}
+
+.tool-section-heading .ant-typography {
+  margin: 0;
+}
+
+.tool-section-heading h4.ant-typography {
+  margin-bottom: 1px;
+  font-size: 15px;
+}
+
+.tool-section-heading .ant-typography-secondary {
+  font-size: 12px;
+}
+
+.home-value-grid,
+.home-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-value-card,
+.home-settings-card,
+.home-action-grid {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.home-value-card {
+  padding: 12px 14px;
+}
+
+.home-value-content {
+  display: grid;
+  grid-template-columns: 90px minmax(100px, 200px);
+  align-items: center;
+  gap: 12px;
+}
+
+.home-value-input {
+  width: 100%;
+}
+
+.home-settings-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.home-setting-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.home-setting-row + .home-setting-row {
+  border-left: 1px solid #eceef1;
+}
+
+.home-setting-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.home-setting-copy .ant-typography-secondary {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-action-grid {
+  display: flex;
+  align-items: center;
+  min-height: 54px;
+  padding: 10px 12px;
+}
+
+.home-action-card.ant-btn {
+  flex: none;
+}
+
+.home-future-slot {
+  flex: 1;
+  padding-left: 12px;
+  color: #a0a6af;
+  font-size: 12px;
+  border-left: 1px solid #eceef1;
+}
+
+@media (max-width: 760px) {
+  .home-settings-card {
+    grid-template-columns: 1fr;
+  }
+
+  .home-setting-row + .home-setting-row {
+    border-top: 1px solid #eceef1;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .home-page {
+    padding: 14px 12px 20px;
+  }
+
+  .home-value-grid {
+    grid-template-columns: 1fr;
+  }
 }
