@@ -41,6 +41,12 @@ const Main: React.FC = () => {
     handleLaunchGame(infoFromHistory);
   };
 
+  const openFakeGamePreview = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("preview", "fake-game");
+    window.location.href = url.toString();
+  };
+
   useEffect(() => {
     return window.electronAPI.onReceiveMessage(
       "game-closed",
@@ -63,6 +69,11 @@ const Main: React.FC = () => {
               点击选择 <strong>游戏启动文件Game.exe</strong>
             </p>
           </div>
+          {import.meta.env.DEV && (
+            <div style={{ marginTop: 16, textAlign: "center" }}>
+              <Button onClick={openFakeGamePreview}>进入假游戏（DEV）</Button>
+            </div>
+          )}
           {gameInfo.gamePath && (
             <div className="tool-gameinfo" >
               <p>已检测路径: {gameInfo.gamePath}</p>
