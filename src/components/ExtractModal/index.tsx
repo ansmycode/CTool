@@ -8,7 +8,7 @@ import {
   message,
 } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
-// import type { FilterRules } from "@/types/Game";
+// import type { FilterRules } from "@/game/types";
 import "./index.css";
 type ExtractedText = {
   id: number;

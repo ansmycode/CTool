@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { InputNumber, Button, Switch, Tooltip, Space } from "antd";
-import type { GameData } from "@/types/Game";
+import type { GameData } from "@/game/types";
 import "./index.css";
 
 interface Props {
