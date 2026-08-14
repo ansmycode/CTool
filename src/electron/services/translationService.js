@@ -7,7 +7,11 @@ builtin-status 状态发送
 
 import fs from "fs";
 import path from "path";
-import { findFileOrDirWithDepthLimit } from "../../utils/tool.js";
+import {
+  createGameDataBackup,
+  isKnownGameDataBackup,
+} from "./gameDataBackupService.js";
+import { getTranslationEngineAdapter } from "./translationEngineAdapters.js";
 
 async function loadTranslationTools() {
   return import("../../engine/mvmz/extract.js");
@@ -41,42 +45,37 @@ export function saveTranslationFile(textArr, gameInfo) {
   }
 }
 
-export async function processBuiltInTranslation(event, chooseFile, gamePath) {
-  const gameDir = path.dirname(gamePath);
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const backupName = `data_backup_${timestamp}.zip`;
-
+export async function processBuiltInTranslation(
+  event,
+  translationFilePath,
+  gameInfo,
+  currentBackupPath,
+) {
+  const gameDir = path.dirname(gameInfo.gamePath);
   try {
-    event.sender.send("builtin-status", { status: "backup" });
-    const found = findFileOrDirWithDepthLimit(gameDir, ["data"], 3);
-    const { backup, replaceFromObject } = await loadTranslationTools();
-    const backupFile = await backup(found.path, path.join(gameDir, backupName));
-    console.log(`备份完成：${backupFile}`);
-    event.sender.send("builtin-status", { status: "backupend" });
-
     const translationData = JSON.parse(
-      fs.readFileSync(chooseFile.filePaths[0], "utf-8"),
+      fs.readFileSync(translationFilePath, "utf8"),
     );
-    let process = 0;
+    if (!translationData || Array.isArray(translationData) || typeof translationData !== "object") {
+      throw new Error("内嵌翻译文件必须是键值 JSON 对象。");
+    }
+    const adapter = getTranslationEngineAdapter(gameInfo.engine);
+    const target = adapter.resolveTarget(gameDir);
+    if (!isKnownGameDataBackup(gameInfo, currentBackupPath)) {
+      await createGameDataBackup(gameInfo, event);
+    }
 
-    found.files.forEach((file) => {
-      if (!file.endsWith(".json")) return;
-
-      let content = JSON.parse(fs.readFileSync(file, "utf-8"));
-      if (Array.isArray(content)) {
-        content = content.map((item) =>
-          replaceFromObject(item, translationData),
-        );
-      } else {
-        content = replaceFromObject(content, translationData);
-      }
-
-      fs.writeFileSync(file, JSON.stringify(content, null, 2));
-      process++;
-      event.sender.send("builtin-status", {
-        status: "builting",
-        data: { current: process, total: found.length },
-      });
+    const { replaceFromObject } = await loadTranslationTools();
+    await adapter.applyTranslation({
+      target,
+      translationData,
+      replaceFromObject,
+      onProgress: (data) => {
+        event.sender.send("builtin-status", {
+          status: "builting",
+          data,
+        });
+      },
     });
 
     event.sender.send("builtin-status", { status: "done" });
@@ -87,6 +86,7 @@ export async function processBuiltInTranslation(event, chooseFile, gamePath) {
       status: "error",
       message: error.message,
     });
+    throw error;
   }
 }
 

@@ -74,7 +74,7 @@ npm run dev
 
 - **加载翻译文件**：将 JSON 发送给当前运行中的游戏，适合临时预览。
 - **提取文本**：扫描游戏数据并在游戏目录生成 `CatToolTranslate.json`。当前不会完整提取插件脚本中的文本。
-- **自动内嵌文本**：先在游戏目录创建带时间戳的 `data_backup_*.zip`，再直接替换 `data` 目录中的 JSON 内容。该功能仍不稳定，请只在备份副本上使用。
+- **自动内嵌文本**：执行前会将当前引擎的数据目录压缩到游戏目录下的 `CTool_Backups`，再写入翻译内容。弹窗也支持手动备份和按时间选择历史备份还原；旧版生成在游戏根目录的 `data_backup_*.zip` 仍可识别。该功能仍不稳定，请只在备份副本上使用。
 
 ### AI 批量翻译
 
@@ -98,6 +98,7 @@ AI 输出具有不确定性，最终译文和游戏内效果需要人工检查�
 | `npm run dev:electron` | 仅启动 Electron；要求 Vite 开发服务器已经运行 |
 | `npm run build` | 执行 TypeScript 检查并构建前端 |
 | `npm run test:ai` | 运行 AI 翻译工作文件、分批和接口模拟测试 |
+| `npm run test:backup` | 运行内嵌翻译数据备份与还原测试 |
 | `npm run lint` | 运行 ESLint |
 | `npm run dist` | 构建 Windows 分发产物 |
 

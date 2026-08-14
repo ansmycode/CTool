@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Button, Tooltip, Modal, notification, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  Modal,
+  notification,
+  Select,
+  Space,
+  Tooltip,
+  Typography,
+} from "antd";
 import ExtractModal from "@/components/ExtractModal";
 import AITranslation from "@/ui/AITranslation";
 import "./index.css";
@@ -12,17 +21,31 @@ type BuiltState =
   | "warning" // 初始 警告
   | "backup" // 开始备份
   | "backupend" // 备份完成
+  | "restore" // 开始还原
+  | "restoreend" // 还原完成
   | "builting" // 内嵌中
   | "done" // 完成
   | "error"; // 出错
 
 const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
   const [api, contextHolder] = notification.useNotification();
+  const [modalApi, modalContextHolder] = Modal.useModal();
   const [builtState, setBuiltState] = useState<BuiltState>("warning");
   const [builtModalShow, setBuiltModalShow] = useState<boolean>(false);
   const [extractModalShow, setExtractModalShow] = useState<boolean>(false);
   const [extractLoading, setExtractLoading] = useState<boolean>(false);
   const [extractText, setExtractText] = useState<any[]>([]);
+  const [backups, setBackups] = useState<BuiltInBackupInfo[]>([]);
+  const [backupDirectory, setBackupDirectory] = useState("");
+  const [selectedBackupPath, setSelectedBackupPath] = useState<string>();
+  const [currentBackupPath, setCurrentBackupPath] = useState<string | null>(null);
+  const [backupListLoading, setBackupListLoading] = useState(false);
+
+  const gameBackupInfo = {
+    gamePath: gameInfo.gamePath as string,
+    engine: gameInfo.engine as string,
+  };
+  const builtBusy = ["backup", "restore", "builting"].includes(builtState);
 
   useEffect(() => {
     if (builtState === "done") {
@@ -41,12 +64,105 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
   };
 
   const handlebuiltIn = async () => {
-    await window.electronAPI.builtInTranslation({
-      gamePath: gameInfo.gamePath,
-      engine: gameInfo.engine,
+    try {
+      const result = await window.electronAPI.builtInTranslation({
+        ...gameBackupInfo,
+        currentBackupPath,
+      });
+      if (result?.status === "success") {
+        api.success({ message: "内嵌翻译完成", description: result.message });
+      }
+    } catch (error) {
+      api.error({
+        message: "内嵌翻译失败",
+        description: error instanceof Error ? error.message : "未知错误",
+      });
+      setBuiltState("error");
+    }
+  };
+
+  const refreshBackups = async () => {
+    setBackupListLoading(true);
+    try {
+      const result = await window.electronAPI.listBuiltInBackups(gameBackupInfo);
+      setBackups(result.backups);
+      setBackupDirectory(result.backupDirectory);
+      setSelectedBackupPath((current) =>
+        result.backups.some((item) => item.filePath === current)
+          ? current
+          : result.backups[0]?.filePath,
+      );
+    } catch (error) {
+      api.error({
+        message: "无法读取备份列表",
+        description: error instanceof Error ? error.message : "未知错误",
+      });
+    } finally {
+      setBackupListLoading(false);
+    }
+  };
+
+  const openBuiltInModal = () => {
+    setBuiltState("warning");
+    setCurrentBackupPath(null);
+    setBuiltModalShow(true);
+    void refreshBackups();
+  };
+
+  const handleCreateBackup = async () => {
+    try {
+      const result = await window.electronAPI.createBuiltInBackup(gameBackupInfo);
+      setCurrentBackupPath(result.backup.filePath);
+      setSelectedBackupPath(result.backup.filePath);
+      api.success({
+        message: "游戏数据已备份",
+        description: result.backup.fileName,
+      });
+      await refreshBackups();
+    } catch (error) {
+      setBuiltState("error");
+      api.error({
+        message: "备份失败",
+        description: error instanceof Error ? error.message : "未知错误",
+      });
+    }
+  };
+
+  const handleRestoreBackup = () => {
+    const selected = backups.find((item) => item.filePath === selectedBackupPath);
+    if (!selected) return;
+    modalApi.confirm({
+      title: "确认还原游戏数据？",
+      content: `将使用 ${selected.displayTime} 的备份覆盖当前游戏数据。还原后请重新启动游戏。`,
+      okText: "确认还原",
+      cancelText: "取消",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await window.electronAPI.restoreBuiltInBackup(
+            gameBackupInfo,
+            selected.filePath,
+          );
+          setCurrentBackupPath(null);
+          api.success({ message: "备份已还原", description: selected.fileName });
+          await refreshBackups();
+        } catch (error) {
+          setBuiltState("error");
+          api.error({
+            message: "还原失败",
+            description: error instanceof Error ? error.message : "未知错误",
+          });
+          throw error;
+        }
+      },
     });
-    // const res = await window.electronAPI.test();
-    // console.log(res);
+  };
+
+  const handleOpenBackupDirectory = async () => {
+    const result = await window.electronAPI.openPathInFileManager(backupDirectory);
+    if (!result.success) {
+      api.error({ message: "无法打开备份文件夹", description: result.message });
+    }
   };
 
   const onLoadTranslated = async () => {
@@ -126,7 +242,7 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
             提取文本
           </Button>
         </Tooltip>
-        <Button size="small" onClick={() => setBuiltModalShow(true)}>
+        <Button size="small" onClick={openBuiltInModal}>
           自动内嵌文本
         </Button>
       </div>
@@ -139,24 +255,92 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
         gameInfo={gameInfo}
       ></ExtractModal>
       <Modal
-        title="⚠️ 风险提示"
+        title="内嵌翻译"
         open={builtModalShow}
+        width={680}
         footer={[
-          <Button key="cancel" onClick={() => setBuiltModalShow(false)}>
+          <Button
+            key="backup"
+            loading={builtState === "backup"}
+            disabled={builtBusy}
+            onClick={handleCreateBackup}
+          >
+            备份游戏数据
+          </Button>,
+          <Button
+            key="restore"
+            loading={builtState === "restore"}
+            disabled={builtBusy || !selectedBackupPath}
+            onClick={handleRestoreBackup}
+          >
+            还原备份
+          </Button>,
+          <Button
+            key="cancel"
+            disabled={builtBusy}
+            onClick={() => setBuiltModalShow(false)}
+          >
             关闭
           </Button>,
           <Button
             key="ok"
             type="primary"
             danger
-            disabled={builtState !== "warning"}
+            loading={builtState === "builting"}
+            disabled={builtBusy}
             onClick={handlebuiltIn}
           >
-            我已知晓风险，继续
+            确认内嵌翻译
           </Button>,
         ]}
-        closable={false} // 不允许手动关
-      ></Modal>
+        closable={!builtBusy}
+        maskClosable={!builtBusy}
+        onCancel={() => setBuiltModalShow(false)}
+      >
+        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+          <Alert
+            type="warning"
+            showIcon
+            message="内嵌会直接修改游戏数据文件，请先确认游戏和存档已经妥善保存。"
+          />
+          <div>
+            <Typography.Text strong>本次备份：</Typography.Text>
+            <Typography.Text type={currentBackupPath ? "success" : "secondary"}>
+              {currentBackupPath
+                ? currentBackupPath.split(/[\\/]/).pop()
+                : "尚未备份；确认内嵌时将自动备份"}
+            </Typography.Text>
+          </div>
+          <div>
+            <Typography.Text strong>备份位置：</Typography.Text>
+            <Typography.Link
+              disabled={!backupDirectory}
+              onClick={handleOpenBackupDirectory}
+              title="点击打开备份文件夹"
+            >
+              {backupDirectory || "正在读取…"}
+            </Typography.Link>
+          </div>
+          <div>
+            <Typography.Text strong>选择还原版本</Typography.Text>
+            <Select
+              style={{ width: "100%", marginTop: 6 }}
+              loading={backupListLoading}
+              value={selectedBackupPath}
+              placeholder="当前游戏还没有可用备份"
+              onChange={setSelectedBackupPath}
+              options={backups.map((item, index) => ({
+                value: item.filePath,
+                label: `${item.displayTime}${index === 0 ? "（最新）" : ""}${item.legacy ? "（旧目录）" : ""}`,
+              }))}
+            />
+          </div>
+          {builtState === "backup" && <Typography.Text>正在备份游戏数据…</Typography.Text>}
+          {builtState === "restore" && <Typography.Text>正在还原游戏数据…</Typography.Text>}
+          {builtState === "builting" && <Typography.Text>正在写入翻译文本…</Typography.Text>}
+        </Space>
+      </Modal>
+      {modalContextHolder}
     </div>
   );
 };

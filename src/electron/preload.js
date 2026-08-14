@@ -31,8 +31,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.removeListener("builtin-status", listener);
     };
   },
-  builtInTranslation: ({ gamePath, engine }) =>
-    ipcRenderer.invoke("built-in-translation", { gamePath, engine }), //选择游戏
+  builtInTranslation: ({ gamePath, engine, currentBackupPath }) =>
+    ipcRenderer.invoke("built-in-translation", {
+      gamePath,
+      engine,
+      currentBackupPath,
+    }),
+  listBuiltInBackups: (gameInfo) =>
+    ipcRenderer.invoke("built-in:list-backups", gameInfo),
+  createBuiltInBackup: (gameInfo) =>
+    ipcRenderer.invoke("built-in:create-backup", gameInfo),
+  restoreBuiltInBackup: (gameInfo, backupPath) =>
+    ipcRenderer.invoke("built-in:restore-backup", { gameInfo, backupPath }),
   loadJson: () => ipcRenderer.invoke("load-json"), //加载翻译文件
   selectAITranslationJson: () =>
     ipcRenderer.invoke("ai-translation:select-source"),
@@ -43,7 +53,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   startAITranslation: (sourcePath, config) =>
     ipcRenderer.invoke("ai-translation:start", { sourcePath, config }),
   readGameHistory: () => ipcRenderer.invoke("read-game-history"), //读取历史游玩
-  openGameDir: (gamePath) => ipcRenderer.invoke("open-game-dir", gamePath), //打开游戏所在目录
+  openPathInFileManager: (targetPath) =>
+    ipcRenderer.invoke("open-path-in-file-manager", targetPath),
   deleteGameHistory: (gamePath) =>
     ipcRenderer.invoke("delete-game-history", gamePath), //删除游戏历史
   test: () => ipcRenderer.invoke("test"),
