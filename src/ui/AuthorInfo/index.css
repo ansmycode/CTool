@@ -1,7 +1,7 @@
 .author-container {
-  display: flex;
-  flex: 1;
-  /* padding: 16px; */
+  height: 100%;
+  min-height: 0;
+  padding: 14px 24px 20px;
   overflow-y: auto;
 }
 
@@ -9,14 +9,39 @@
   width: 100%;
 }
 
-.author-list {
-  padding-left: 20px;
-  line-height: 1.8;
+.author-card .ant-card-body {
+  padding: 20px 24px 24px;
+}
+
+.author-download-warning {
+  margin-bottom: 18px;
+}
+
+.author-heading h4 {
+  margin: 0 0 4px;
+}
+
+.author-heading p {
+  margin-bottom: 8px;
+}
+
+.author-card .author-faq {
+  padding: 4px 0 0;
+}
+
+.author-card .ant-divider {
+  margin: 20px 0;
+}
+
+.author-support h5 {
+  margin: 0 0 6px;
+}
+
+.author-support p {
+  margin-bottom: 14px;
+  color: #555;
 }
 
 .author-contact {
-  padding: 12px 16px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #eee;
+  padding-top: 2px;
 }

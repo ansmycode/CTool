@@ -58,6 +58,39 @@
   overflow-x: hidden;
 }
 
+.launch-page {
+  padding: 14px 16px 0;
+}
+
+.launch-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 3rem;
+}
+
+.launch-heading h2 {
+  margin: 0 0 4px;
+  font-size: 21px;
+  line-height: 1.4;
+}
+
+.launch-heading p {
+  margin: 0;
+  color: #7a7a7a;
+  font-size: 14px;
+}
+
+.launch-connection-note {
+  margin: 10px 3rem 4px;
+  padding-left: 10px;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.6;
+  border-left: 3px solid #91caff;
+}
+
 .drop-zone {
   padding: 40px;
   margin: 12px 3rem;
@@ -76,7 +109,54 @@
 }
 
 .tool-gameinfo {
-  margin: 12px 3rem;
+  margin: 14px 3rem 0;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.gameinfo-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.gameinfo-title span {
+  color: #1677ff;
+  font-size: 13px;
+}
+
+.gameinfo-details {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 80px 140px;
+  gap: 9px 12px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.gameinfo-label {
+  color: #8a8a8a;
+}
+
+.gameinfo-path {
+  grid-column: 2 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gameinfo-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.gameinfo-unsupported {
+  color: #999;
 }
 
 .tab-main {
