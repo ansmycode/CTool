@@ -111,5 +111,6 @@ export const fakeGameData: GameData = {
     { id: 3, name: "游侠" },
   ],
   playerSpeed: 4,
+  gameSpeed: 1,
   through: false,
 };
