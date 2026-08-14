@@ -1,8 +1,8 @@
 import React from "react";
-import { Card, Typography, Divider, Space } from "antd";
+import { Alert, Card, Divider, Space, Typography } from "antd";
+import { GithubOutlined, QqOutlined } from "@ant-design/icons";
 import FAQ from "@/components/FAQ";
 import { authorFaqData } from "@/common/common";
-import { GithubOutlined, QqOutlined } from "@ant-design/icons";
 import "./index.css";
 
 const { Title, Paragraph, Text, Link } = Typography;
@@ -11,47 +11,47 @@ const AuthorInfo: React.FC = () => {
   return (
     <div className="author-container">
       <Card className="author-card">
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        <Alert
+          className="author-download-warning"
+          type="warning"
+          message="CTool 是免费工具，请勿付费购买"
+          description="不要信任来历不明的下载源、网盘重新打包版或第三方修改版。目前请以官方 GitHub 仓库中的代码和说明为准。"
+        />
+
+        <div className="author-heading">
           <Title level={4}>作者的话</Title>
-          <FAQ data={authorFaqData} />
-          <Divider />
-          
-          <Title level={5}>使用说明</Title>
-          <Paragraph>
-            基本操作跟某Tool是差不多的
-          </Paragraph>
-          <Divider />
-
-          <Title level={5}>免责声明</Title>
           <Paragraph type="secondary">
-            本工具仅供学习与个人研究使用，请勿用于商业用途或违法用途。
+            使用前建议先阅读下面的说明。点击标题即可展开对应内容。
           </Paragraph>
-          <Divider />
+        </div>
 
-          <Title level={5}>联系 / 反馈</Title>
+        <FAQ data={authorFaqData} />
+
+        <Divider />
+
+        <div className="author-support">
+          <Title level={5}>喜欢项目？请给作者点一个 Star</Title>
           <Paragraph>
-            <div className="author-contact">
-              <Space direction="vertical" size="small">
-                <Space>
-                  <QqOutlined />
-                  <Text>作者 QQ：</Text>
-                  <Text copyable>3344505357</Text>
-                </Space>
-
-                <Space>
-                  <GithubOutlined />
-                  <Text>GitHub：</Text>
-                  <Link
-                    href="https://github.com/ansmycode/CTool.git"
-                    target="_blank"
-                  >
-                    https://github.com/ansmycode/CTool.git
-                  </Link>
-                </Space>
-              </Space>
-            </div>
+            如果项目对你有帮助，欢迎在 GitHub 点一个 Star。反馈问题和分享项目也同样是在帮助 CTool 持续完善。
           </Paragraph>
-        </Space>
+        </div>
+
+        <div className="author-contact">
+          <Space size="large" wrap>
+            <Space>
+              <QqOutlined />
+              <Text>QQ：</Text>
+              <Text copyable>3344505357</Text>
+            </Space>
+            <Space>
+              <GithubOutlined />
+              <Text>GitHub：</Text>
+              <Link href="https://github.com/ansmycode/CTool" target="_blank">
+                github.com/ansmycode/CTool
+              </Link>
+            </Space>
+          </Space>
+        </div>
       </Card>
     </div>
   );

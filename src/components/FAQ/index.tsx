@@ -11,10 +11,17 @@ interface Props {
 }
 
 const FAQ: React.FC<Props> = ({ data }) => {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [openIndexes, setOpenIndexes] = useState<Set<number>>(
+    () => new Set(data.map((_, index) => index)),
+  );
 
   const toggle = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index);
+    setOpenIndexes((current) => {
+      const next = new Set(current);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
   };
 
   return (
@@ -26,12 +33,12 @@ const FAQ: React.FC<Props> = ({ data }) => {
             onClick={() => toggle(index)}
           >
             <span>{item.question}</span>
-            <span className={`faq-arrow ${openIndex === index ? "open" : ""}`}>
+            <span className={`faq-arrow ${openIndexes.has(index) ? "open" : ""}`}>
               ▶
             </span>
           </div>
 
-          {openIndex === index && (
+          {openIndexes.has(index) && (
             <div className="faq-answer">
               {item.answer}
             </div>

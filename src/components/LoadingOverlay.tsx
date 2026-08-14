@@ -30,6 +30,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
         justifyContent: "center",
         alignItems: "center",
         zIndex: 9999, // 保证在最上层
+        color: "white",
       }}
     >
       <Spin indicator={antIcon} tip={text} />

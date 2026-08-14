@@ -48,6 +48,7 @@ const Main: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!window.electronAPI?.onReceiveMessage) return;
     return window.electronAPI.onReceiveMessage(
       "game-closed",
       (_: unknown, result: any) => {
@@ -62,34 +63,58 @@ const Main: React.FC = () => {
       key: "1",
       label: "游戏启动",
       children: (
-        <div style={{ padding: 16 }}>
+        <div className="launch-page">
+          <div className="launch-heading">
+            <div>
+              <h2>启动游戏</h2>
+              <p>选择 RPG Maker MV / MZ 游戏的 Game.exe，识别完成后即可启动。</p>
+            </div>
+            {import.meta.env.DEV && (
+              <Button size="small" onClick={openFakeGamePreview}>
+                进入假游戏（DEV）
+              </Button>
+            )}
+          </div>
+          <p className="launch-connection-note">
+            <strong>连接说明：</strong>
+            部分游戏在标题画面即可完成连接，部分游戏需要进入新游戏或读取存档后的地图。
+          </p>
           <div onClick={chooseGame} className="drop-zone">
             <InboxOutlined style={{ fontSize: 48, color: "#1890ff" }} />
             <p style={{ marginTop: 16 }}>
               点击选择 <strong>游戏启动文件Game.exe</strong>
             </p>
           </div>
-          {import.meta.env.DEV && (
-            <div style={{ marginTop: 16, textAlign: "center" }}>
-              <Button onClick={openFakeGamePreview}>进入假游戏（DEV）</Button>
-            </div>
-          )}
           {gameInfo.gamePath && (
-            <div className="tool-gameinfo" >
-              <p>已检测路径: {gameInfo.gamePath}</p>
-              <p>游戏引擎: {gameInfo?.engine || "未知"}</p>
-              <p>游戏版本: {gameInfo?.version || "未知"}</p>
-              {
-                gameInfo?.engine ? <Button
+            <section className="tool-gameinfo">
+              <div className="gameinfo-title">
+                <strong>游戏识别结果</strong>
+                <span>{gameInfo?.engine ? "可以启动" : "暂不支持"}</span>
+              </div>
+              <div className="gameinfo-details">
+                <span className="gameinfo-label">启动文件</span>
+                <span className="gameinfo-path" title={gameInfo.gamePath}>
+                  {gameInfo.gamePath}
+                </span>
+                <span className="gameinfo-label">游戏引擎</span>
+                <span>{gameInfo?.engine || "未知"}</span>
+                <span className="gameinfo-label">引擎版本</span>
+                <span>{gameInfo?.version || "未知"}</span>
+              </div>
+              <div className="gameinfo-actions">
+                {gameInfo?.engine ? (
+                  <Button
                   type="primary"
                   onClick={() => handleLaunchGame(gameInfo)}
                   disabled={!gameInfo?.engine}
-                >
-                  启动游戏并注入脚本
-                </Button> : <span style={{ color: "#999" }}>不支持或未知引擎</span>
-              }
-
-            </div>
+                  >
+                    启动游戏并注入脚本
+                  </Button>
+                ) : (
+                  <span className="gameinfo-unsupported">不支持或未知引擎</span>
+                )}
+              </div>
+            </section>
           )}
         </div>
       ),
