@@ -95,7 +95,10 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   return (
     <div className="cheat-menu">
       {contextHolder}
-      <LoadingOverlay visible={!gameReady} />
+      <LoadingOverlay
+        visible={!gameReady}
+        text="正在等待游戏初始化；部分游戏需要进入新游戏或读取存档后才会完成连接。"
+      />
       <Tabs
         className="cheat-menu-tabs"
         activeKey={activeKey}

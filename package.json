@@ -11,6 +11,7 @@
     "build": "tsc -b && vite build",
     "test:ai": "node --test tests/ai/*.test.js",
     "test:backup": "node --test tests/backup/*.test.js",
+    "test:injection": "node --test tests/injection/*.test.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "build:main": "esbuild src/electron/main.js --bundle --platform=node --target=node18 --format=esm --outdir=dist-electron",

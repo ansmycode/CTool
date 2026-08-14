@@ -1,6 +1,16 @@
 import http from 'http';
 export function createServer(mainWindow) {
   const server = http.createServer((req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, {
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      });
+      res.end();
+      return;
+    }
 
     // 只处理 POST /gameReady
     if (req.method === "POST" && req.url === "/gameReady") {

@@ -69,17 +69,17 @@ export async function request<T = any>(
   // 解析完整URL
   const requestUrl = resolveUrl(url, params, baseUrl);
 
-  // 默认请求头
-  const defaultHeaders = {
-    "Content-Type": "application/json",
-    ...headers,
-  };
+  // 只有实际发送 JSON 请求体时才声明 Content-Type；GET 保持简单请求，避免无意义的 CORS 预检。
+  const defaultHeaders: Record<string, string> = { ...headers };
+  if (method !== "GET" && data !== undefined) {
+    defaultHeaders["Content-Type"] = "application/json";
+  }
 
   try {
     const response = await fetch(requestUrl, {
       method,
       headers: defaultHeaders,
-      body: method !== "GET" && data ? JSON.stringify(data) : undefined,
+      body: method !== "GET" && data !== undefined ? JSON.stringify(data) : undefined,
     });
 
     // 解析响应
