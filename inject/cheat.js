@@ -30,6 +30,50 @@
     res.end(JSON.stringify({ success: false, message, ...extra }));
   }
 
+  // ======== 全局游戏速度 ========
+
+  let gameSpeedRate = 1;
+  let gameSpeedAccumulator = 0;
+  let originalSceneManagerUpdateScene = null;
+
+  function setGameSpeed(nextRate) {
+    nextRate = Number(nextRate);
+
+    if (!Number.isFinite(nextRate) || nextRate <= 0) {
+      throw new Error("游戏倍率必须是大于 0 的数字");
+    }
+
+    gameSpeedRate = nextRate;
+    gameSpeedAccumulator = 0;
+
+    if (nextRate === 1) {
+      if (originalSceneManagerUpdateScene) {
+        SceneManager.updateScene = originalSceneManagerUpdateScene;
+        originalSceneManagerUpdateScene = null;
+      }
+      return;
+    }
+
+    if (originalSceneManagerUpdateScene) return;
+
+    originalSceneManagerUpdateScene = SceneManager.updateScene;
+    SceneManager.updateScene = function () {
+      gameSpeedAccumulator += gameSpeedRate;
+
+      const updateCount = Math.floor(gameSpeedAccumulator);
+      gameSpeedAccumulator -= updateCount;
+
+      for (let i = 0; i < updateCount; i++) {
+        if (i > 0) {
+          SceneManager.updateInputData();
+          SceneManager.changeScene();
+        }
+
+        originalSceneManagerUpdateScene.call(this);
+      }
+    };
+  }
+
   // ======== 路由表 ========
 
   const routes = {
@@ -119,6 +163,7 @@
             switches,
             classList,
             playerSpeed: $gamePlayer.moveSpeed(),
+            gameSpeed: gameSpeedRate,
             through: $gamePlayer._through,
           },
           success: true,
@@ -329,6 +374,9 @@
         }
         if (type === "playerSpeed") {
           $gamePlayer.setMoveSpeed(value);
+        }
+        if (type === "gameSpeed") {
+          setGameSpeed(value);
         }
         if (type === "through") {
           $gamePlayer._through = value;

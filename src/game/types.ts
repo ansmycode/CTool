@@ -20,6 +20,7 @@ export interface GameData {
   switches: any[];
   classes: any[];
   playerSpeed: number;
+  gameSpeed: number;
   through: boolean;
 }
 

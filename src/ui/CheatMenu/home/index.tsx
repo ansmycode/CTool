@@ -133,6 +133,37 @@ const Home: React.FC<Props> = ({
               />
             </div>
           </div>
+
+          <div className="home-value-card">
+            <div className="home-value-content">
+              <Tooltip title="不要调的太高!">
+                <Typography.Text>游戏倍率</Typography.Text>
+              </Tooltip>
+              <InputNumber
+                className="home-value-input"
+                min={0.1}
+                max={10}
+                precision={1}
+                stringMode={false}
+                step={0.5}
+                addonAfter="×"
+                value={data?.gameSpeed || 1}
+                onChange={(value: number | null) => {
+                  if (value !== null) {
+                    setData((prev) =>
+                      prev ? { ...prev, gameSpeed: value } : prev,
+                    );
+                  }
+                }}
+                onBlur={(event) => {
+                  const value = Number(event.target.value);
+                  if (Number.isFinite(value) && value > 0) {
+                    setSomeGameSettings("gameSpeed", value);
+                  }
+                }}
+              />
+            </div>
+          </div>
         </div>
       </section>
 

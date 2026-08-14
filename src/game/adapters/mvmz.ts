@@ -17,6 +17,7 @@ interface MVMZGameData {
   switches: any[];
   classList: any[];
   playerSpeed: number;
+  gameSpeed: number;
   through: boolean;
 }
 
@@ -76,6 +77,7 @@ export const mvmzAdapter: GameEngineAdapter = {
       switches: raw.switches,
       classes: raw.classList,
       playerSpeed: raw.playerSpeed,
+      gameSpeed: raw.gameSpeed,
       through: raw.through,
     };
   },
