@@ -13,6 +13,8 @@ dist-react
 dist-electron
 agent_work
 *.local
+*.ctool-ai-work.json
+*.ai-translated.json
 
 # Editor directories and files
 .vscode/*

@@ -34,6 +34,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   builtInTranslation: ({ gamePath, engine }) =>
     ipcRenderer.invoke("built-in-translation", { gamePath, engine }), //选择游戏
   loadJson: () => ipcRenderer.invoke("load-json"), //加载翻译文件
+  selectAITranslationJson: () =>
+    ipcRenderer.invoke("ai-translation:select-source"),
+  prepareAITranslationWorkFile: (sourcePath) =>
+    ipcRenderer.invoke("ai-translation:prepare-work-file", sourcePath),
+  testAITranslationConnection: (config) =>
+    ipcRenderer.invoke("ai-translation:test-connection", config),
+  startAITranslation: (sourcePath, config) =>
+    ipcRenderer.invoke("ai-translation:start", { sourcePath, config }),
   readGameHistory: () => ipcRenderer.invoke("read-game-history"), //读取历史游玩
   openGameDir: (gamePath) => ipcRenderer.invoke("open-game-dir", gamePath), //打开游戏所在目录
   deleteGameHistory: (gamePath) =>

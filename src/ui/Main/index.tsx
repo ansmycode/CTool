@@ -132,9 +132,11 @@ const Main: React.FC = () => {
           )}
         </Suspense>
       </Content>
-      <Footer className="layout-footer" style={{ textAlign: "center" }}>
-        CTool v0.0.1
-      </Footer>
+      {!isGameStarting && (
+        <Footer className="layout-footer" style={{ textAlign: "center" }}>
+          CTool v0.0.1
+        </Footer>
+      )}
     </Layout>
   );
 };

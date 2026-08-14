@@ -6,7 +6,7 @@ import { fakeGameData } from "./fakeGameData";
 import "@/ui/CheatMenu/index.css";
 import "@/ui/Main/index.css";
 
-const { Content, Footer } = Layout;
+const { Content } = Layout;
 
 const allCapabilities = new Set<GameCapability>([
   "gold",
@@ -56,9 +56,6 @@ export default function FakeGamePreview() {
           />
         </div>
       </Content>
-      <Footer className="layout-footer" style={{ textAlign: "center" }}>
-        CTool 假游戏预览
-      </Footer>
     </Layout>
   );
 }
