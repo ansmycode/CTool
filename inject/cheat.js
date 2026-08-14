@@ -33,6 +33,9 @@
   // ======== 路由表 ========
 
   const routes = {
+    "GET /ping": async (req, res) => {
+      sendJson(res, 200, { success: true });
+    },
     "GET /getGameData": async (req, res) => {
       try {
         const gold = $gameParty.gold();
@@ -308,10 +311,18 @@
   // ======== 服务启动 ========
 
   const server = http.createServer(async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     const url = new URL(req.url, `http://${req.headers.host}`);
     const key = `${req.method} ${url.pathname}`;
-
-    res.setHeader("Access-Control-Allow-Origin", "*");
 
     const handler = routes[key];
     if (handler) {
@@ -326,35 +337,52 @@
   });
 
   // ======== 游戏加载完成主动通知工具端 ========
-  function notifyGameReady() {
+  let hasNotifiedGameReady = false;
+  let isNotifyingGameReady = false;
+
+  function notifyGameReady(retryCount = 0) {
+    if (hasNotifiedGameReady || isNotifyingGameReady) return;
+    isNotifyingGameReady = true;
     try {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "http://127.0.0.1:5001/gameReady", true); // 工具端端口
-      xhr.setRequestHeader("Content-Type", "application/json");
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
+          isNotifyingGameReady = false;
           if (xhr.status === 200) {
+            hasNotifiedGameReady = true;
             console.log("主动通知工具端: 游戏已加载完成");
           } else {
             console.error("通知工具端失败:", xhr.status, xhr.responseText);
+            if (retryCount < 4) {
+              setTimeout(() => notifyGameReady(retryCount + 1), 1000);
+            }
           }
         }
       };
-      xhr.send(JSON.stringify({ status: "ready" }));
+      // 不设置 JSON Content-Type，避免 file:// 页面发送 CORS 预检请求。
+      xhr.send();
     } catch (e) {
+      isNotifyingGameReady = false;
       console.error("XHR 异常:", e);
+      if (retryCount < 4) {
+        setTimeout(() => notifyGameReady(retryCount + 1), 1000);
+      }
     }
   }
 
-  // Hook Scene_Map.start → 地图加载完成即游戏初始化完成
+  // 启动完成时先通知一次；如果游戏对象尚未就绪，进入地图时再兜底通知。
   const _Scene_Boot_start = Scene_Boot.prototype.start;
   Scene_Boot.prototype.start = function () {
     _Scene_Boot_start.call(this);
     setTimeout(() => {
-      // 确认数据初始化完成
-      if ($dataSystem && $gameParty) {
-        notifyGameReady();
-      }
+      if ($dataSystem && $gameParty) notifyGameReady();
     }, 200);
+  };
+
+  const _Scene_Map_start = Scene_Map.prototype.start;
+  Scene_Map.prototype.start = function () {
+    _Scene_Map_start.call(this);
+    if ($dataSystem && $gameParty) notifyGameReady();
   };
 })();
