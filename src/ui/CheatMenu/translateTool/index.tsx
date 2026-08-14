@@ -87,7 +87,7 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
   const getGameText = async () => {
     try {
       const newData: any = await window.electronAPI.applyFilters({
-        gameInfo
+        gameInfo,
       });
       if (newData) setExtractText(newData);
     } catch (e) {
@@ -117,7 +117,7 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
         <Button size="small" onClick={onLoadTranslated}>
           加载翻译文件
         </Button>
-        <Tooltip title="提取不是很全,没有对js脚本中的文本做适配">
+        <Tooltip title="注意:未对游戏插件中的文本做兼容">
           <Button
             size="small"
             onClick={handleExtractText}
@@ -126,10 +126,7 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
             提取文本
           </Button>
         </Tooltip>
-        <Button
-          size="small"
-          onClick={() => setBuiltModalShow(true)}
-        >
+        <Button size="small" onClick={() => setBuiltModalShow(true)}>
           自动内嵌文本
         </Button>
       </div>

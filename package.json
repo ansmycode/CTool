@@ -9,6 +9,7 @@
     "dev:react": "vite",
     "dev:electron": "wait-on http://127.0.0.1:5173 && electron .",
     "build": "tsc -b && vite build",
+    "test:ai": "node --test tests/ai/*.test.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "build:main": "esbuild src/electron/main.js --bundle --platform=node --target=node18 --format=esm --outdir=dist-electron",

@@ -55,7 +55,8 @@
 .ai-translation-card .ant-input-affix-wrapper,
 .ai-translation-card .ant-select-selector,
 .ai-translation-card .ant-btn,
-.ai-security-note {
+.ai-security-note,
+.ai-interaction-message {
   border-radius: 4px;
 }
 
@@ -77,11 +78,13 @@
   border-color: #e5e7eb;
 }
 
-.ai-security-note .ant-alert-icon {
+.ai-security-note .ant-alert-icon,
+.ai-interaction-message .ant-alert-icon {
   margin-inline-end: 6px;
 }
 
-.ai-security-note .ant-alert-message {
+.ai-security-note .ant-alert-message,
+.ai-interaction-message .ant-alert-message {
   font-size: 11px;
   line-height: 18px;
 }

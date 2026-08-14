@@ -1,5 +1,12 @@
 export {};
 
+import type {
+  AITranslationFileSelection,
+  AITranslationPreparation,
+  AITranslationAPIConfig,
+  AIConnectionTestResult,
+} from "@/types/AITranslation";
+
 declare global {
   interface Window {
     electronAPI: {
@@ -15,6 +22,17 @@ declare global {
         engine: string | null;
       }) => Promise<void>;
       loadJson: () => Promise<void>;
+      selectAITranslationJson: () => Promise<AITranslationFileSelection | null>;
+      prepareAITranslationWorkFile: (
+        sourcePath: string,
+      ) => Promise<AITranslationPreparation>;
+      testAITranslationConnection: (
+        config: AITranslationAPIConfig,
+      ) => Promise<AIConnectionTestResult>;
+      startAITranslation: (
+        sourcePath: string,
+        config: AITranslationAPIConfig,
+      ) => Promise<AITranslationPreparation>;
       readGameHistory: () => Promise<any[]>;
       openGameDir: (gamePath: string) => Promise<void>;
       deleteGameHistory: (gamePath: string) => Promise<void>;

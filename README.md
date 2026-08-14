@@ -23,6 +23,7 @@ CTool 可以识别本地游戏的引擎与版本，在启动游戏时注入本�
 - 调整角色队伍、职业、等级、经验和战斗属性
 - 在战斗中直接取得胜利
 - 加载实时翻译文件、提取游戏文本、将翻译写入游戏数据
+- 使用自备 OpenAI 或 DeepSeek API Key 批量翻译提取后的 JSON，并支持断点续传
 - 保存游玩历史，并可从历史记录再次启动或打开游戏目录
 
 具体功能是否生效取决于游戏版本、插件和脚本定制情况。
@@ -75,6 +76,19 @@ npm run dev
 - **提取文本**：扫描游戏数据并在游戏目录生成 `CatToolTranslate.json`。当前不会完整提取插件脚本中的文本。
 - **自动内嵌文本**：先在游戏目录创建带时间戳的 `data_backup_*.zip`，再直接替换 `data` 目录中的 JSON 内容。该功能仍不稳定，请只在备份副本上使用。
 
+### AI 批量翻译
+
+启动游戏并进入“翻译”页面后，可以选择 CTool 提取的纯净 JSON，配置 OpenAI 或 DeepSeek 的 API 地址、API Key、模型和语言，再进行连接测试与批量翻译。
+
+- API Key 仅在本次运行期间使用，不写入配置文件或工作文件。
+- 翻译内容会自动分批请求，每批完成后立即保存进度。
+- 首次开始翻译时会在原始 JSON 同目录生成 `*.ctool-ai-work.json` 工作文件。
+- 工具意外关闭后，重新选择同一个原始 JSON 即可继续未完成任务。
+- 全部完成后生成 `*.ai-translated.json` 纯净译文；第一版不会自动删除工作文件。
+- 当前开放 OpenAI 和 DeepSeek，Kimi 与自定义兼容接口暂未接入。
+
+AI 输出具有不确定性，最终译文和游戏内效果需要人工检查。详细设计与已完成范围见 [AI 翻译功能计划书](./docs/AI_TRANSLATION_PLAN.md)。
+
 ## 开发
 
 | 命令 | 用途 |
@@ -83,6 +97,7 @@ npm run dev
 | `npm run dev:react` | 仅启动 Vite 前端；依赖 Electron API 的功能不可用 |
 | `npm run dev:electron` | 仅启动 Electron；要求 Vite 开发服务器已经运行 |
 | `npm run build` | 执行 TypeScript 检查并构建前端 |
+| `npm run test:ai` | 运行 AI 翻译工作文件、分批和接口模拟测试 |
 | `npm run lint` | 运行 ESLint |
 | `npm run dist` | 构建 Windows 分发产物 |
 
@@ -93,6 +108,7 @@ src/
 ├─ electron/              Electron 主进程、窗口、IPC 与业务服务
 │  ├─ ipc/                渲染进程调用入口
 │  ├─ services/           检测、注入、翻译和历史记录服务
+│  ├─ ai/                 AI 服务请求、分批、重试与断点工作文件
 │  └─ window/             BrowserWindow 创建与开发/生产加载策略
 ├─ engine/mvmz/           MV/MZ 游戏文件处理、注入和文本提取逻辑
 ├─ game/                  渲染进程的统一游戏数据层
@@ -147,7 +163,6 @@ CheatMenu
 ## 计划
 
 - 提高文本提取与内嵌翻译的完整性和稳定性
-- 接入用户自备 API Key 的 AI 批量翻译（详见 [AI 翻译功能计划书](./docs/AI_TRANSLATION_PLAN.md)）
 - 增加仅开发环境可用的页面快速预览入口（详见 [开发页面预览计划](./docs/DEV_PAGE_PREVIEW_PLAN.md)）
 - 适配更多旧版 RPG Maker 引擎
 - 研究 Wolf RPG Editor 支持

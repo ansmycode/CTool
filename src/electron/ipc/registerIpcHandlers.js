@@ -14,6 +14,17 @@ import {
   readTranslationJson,
   saveTranslationFile,
 } from "../services/translationService.js";
+import {
+  inspectAITranslationSource,
+  prepareAITranslationWorkFile,
+} from "../ai/workFile.js";
+import { testAIProviderConnection } from "../ai/providerClient.js";
+import { runAITranslation } from "../ai/translator.js";
+import { runExclusiveAITranslation } from "../ai/taskRegistry.js";
+
+function safeAIError(error, fallback) {
+  return new Error(error instanceof Error ? error.message : fallback);
+}
 
 export function registerIpcHandlers({ getMainWindow, gameInjectionService }) {
   ipcMain.handle("choose-game", async () => {
@@ -73,6 +84,60 @@ export function registerIpcHandlers({ getMainWindow, gameInjectionService }) {
     if (!chooseFile.filePaths[0]) return;
     return readTranslationJson(chooseFile.filePaths[0]);
   });
+
+  ipcMain.handle("ai-translation:select-source", async () => {
+    const chooseFile = await dialog.showOpenDialog(getMainWindow(), {
+      properties: ["openFile"],
+      filters: [{ name: "JSON Files", extensions: ["json"] }],
+    });
+    const sourcePath = chooseFile.filePaths[0];
+    if (chooseFile.canceled || !sourcePath) return null;
+
+    try {
+      return inspectAITranslationSource(sourcePath);
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "无法读取原始翻译 JSON。",
+      );
+    }
+  });
+
+  ipcMain.handle("ai-translation:prepare-work-file", async (_event, sourcePath) => {
+    if (typeof sourcePath !== "string" || sourcePath.length === 0) {
+      throw new Error("缺少原始翻译 JSON 路径。");
+    }
+    try {
+      return prepareAITranslationWorkFile(sourcePath);
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "无法创建 AI 翻译工作文件。",
+      );
+    }
+  });
+
+  ipcMain.handle("ai-translation:test-connection", async (_event, config) => {
+    try {
+      return await testAIProviderConnection(config);
+    } catch (error) {
+      throw safeAIError(error, "AI 服务连接测试失败。");
+    }
+  });
+
+  ipcMain.handle(
+    "ai-translation:start",
+    async (_event, { sourcePath, config }) => {
+      if (typeof sourcePath !== "string" || sourcePath.length === 0) {
+        throw new Error("缺少原始翻译 JSON 路径。");
+      }
+      try {
+        return await runExclusiveAITranslation(sourcePath, () =>
+          runAITranslation(sourcePath, config),
+        );
+      } catch (error) {
+        throw safeAIError(error, "AI 翻译失败。");
+      }
+    },
+  );
 
   ipcMain.handle("read-game-history", async () => {
     try {
