@@ -1,14 +1,14 @@
 import fs from "fs";
-import { findFileOrDirWithDepthLimit } from "../../utils/tool.js";
+import path from "path";
 
-function resolveMvMzTarget(gameDir) {
-  const found = findFileOrDirWithDepthLimit(gameDir, ["data"], 3);
-  if (!found?.path || !Array.isArray(found.files)) {
+function resolveMvMzTarget(gameDir, engine) {
+  const dataPath = path.join(gameDir, engine === "MV" ? "www/data" : "data");
+  if (!fs.existsSync(dataPath) || !fs.statSync(dataPath).isDirectory()) {
     throw new Error("未找到 RPG Maker 游戏数据目录。");
   }
   return {
-    path: found.path,
-    files: found.files,
+    path: dataPath,
+    files: fs.readdirSync(dataPath).map((file) => path.join(dataPath, file)),
     label: "data",
   };
 }
@@ -41,15 +41,17 @@ function validateMvMzRestore(directory) {
   }
 }
 
-const mvMzAdapter = {
-  resolveTarget: resolveMvMzTarget,
-  applyTranslation: applyMvMzTranslation,
-  validateRestore: validateMvMzRestore,
-};
+function createMvMzAdapter(engine) {
+  return {
+    resolveTarget: (gameDir) => resolveMvMzTarget(gameDir, engine),
+    applyTranslation: applyMvMzTranslation,
+    validateRestore: validateMvMzRestore,
+  };
+}
 
 const engineAdapters = new Map([
-  ["MV", mvMzAdapter],
-  ["MZ", mvMzAdapter],
+  ["MV", createMvMzAdapter("MV")],
+  ["MZ", createMvMzAdapter("MZ")],
 ]);
 
 export function getTranslationEngineAdapter(engine) {

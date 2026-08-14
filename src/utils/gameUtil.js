@@ -1,34 +1,31 @@
 // import { app } from "electron";
 import path from "path";
 import fs from "fs";
-import { findFileOrDirWithDepthLimit } from "./tool.js";
 
-/**
- * 递归查找文件/目录
- * @param {string} dir 起始目录
- * @param {string[]} targetFiles 目标文件名数组
- * @param {number} maxDepth 最大递归深度
- * @param {number} currentDepth 当前递归深度（初始调用时传0）
- * @returns {string|object} 找到文件返回文件路径 找到文件夹返回对象 保存文件夹路径与文件夹里的文件路径
- */
 const mvmzDetector = {
   name: "RPG Maker MV/MZ",
   readInfo: (gamePath) => {
     const gameDir = path.dirname(gamePath);
-    const targetFiles = ["rpg_core.js", "rmmz_core.js"];
-    const maxDepth = 3; // 限制递归深度3层
     try {
-      const coreFile = findFileOrDirWithDepthLimit(
-        gameDir,
-        targetFiles,
-        maxDepth
+      const candidates = [
+        {
+          engine: "MV",
+          coreFile: path.join(gameDir, "www", "js", "rpg_core.js"),
+          dataFile: path.join(gameDir, "www", "data", "System.json"),
+        },
+        {
+          engine: "MZ",
+          coreFile: path.join(gameDir, "js", "rmmz_core.js"),
+          dataFile: path.join(gameDir, "data", "System.json"),
+        },
+      ];
+      const candidate = candidates.find(
+        ({ coreFile, dataFile }) =>
+          fs.existsSync(coreFile) && fs.existsSync(dataFile),
       );
-      if (!coreFile) return null;
-      const dataFile = findFileOrDirWithDepthLimit(
-        gameDir,
-        ["System.json"],
-        maxDepth
-      );
+      if (!candidate) return null;
+
+      const { coreFile, dataFile, engine } = candidate;
       const content = fs.readFileSync(coreFile, "utf-8");
       const system = JSON.parse(fs.readFileSync(dataFile, "utf-8"));
       const engineMatch = content.match(
@@ -41,7 +38,7 @@ const mvmzDetector = {
       return {
         title: system.gameTitle,
         version: versionMatch[1] || "N/A",
-        engine: engineMatch[1] || "Unknown",
+        engine: engineMatch?.[1] || engine,
         gamePath,
       };
     } catch {

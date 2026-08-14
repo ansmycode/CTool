@@ -24,7 +24,7 @@ export async function extractGameText(gameInfo) {
   const gameDir = path.dirname(gameInfo.gamePath);
   try {
     const { ExtractText } = await loadTranslationTools();
-    return await ExtractText(gameDir);
+    return await ExtractText(gameDir, gameInfo.engine);
   } catch (error) {
     return error.message;
   }
