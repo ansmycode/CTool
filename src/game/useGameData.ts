@@ -56,6 +56,12 @@ export function useGameData(engineType: EngineType) {
   const achieveVictory = () =>
     modify((currentAdapter) => currentAdapter.achieveVictory?.());
 
+  const achieveDefeat = () =>
+    modify((currentAdapter) => currentAdapter.achieveDefeat?.());
+
+  const escapeBattle = () =>
+    modify((currentAdapter) => currentAdapter.escapeBattle?.());
+
   const setSomeGameSettings = (type: string, value: any) =>
     modify((currentAdapter) =>
       currentAdapter.setSomeGameSettings(type, value),
@@ -75,6 +81,8 @@ export function useGameData(engineType: EngineType) {
     setActorData,
     sendTranslationData,
     achieveVictory,
+    achieveDefeat,
+    escapeBattle,
     setSomeGameSettings,
   };
 }

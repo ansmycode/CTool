@@ -27,6 +27,8 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     setActorData,
     sendTranslationData,
     achieveVictory,
+    achieveDefeat,
+    escapeBattle,
     setSomeGameSettings,
   } = useGameData(gameInfo.engine);
 
@@ -89,6 +91,8 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     setActorData,
     sendTranslationData,
     achieveVictory,
+    achieveDefeat,
+    escapeBattle,
     setSomeGameSettings,
   });
 

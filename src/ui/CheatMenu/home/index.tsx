@@ -7,6 +7,8 @@ interface Props {
   rpgGameData: GameData | null;
   getGameData: () => void;
   handleAchieveVictory: () => void;
+  handleAchieveDefeat: () => void;
+  handleEscapeBattle: () => void;
   modifyGold: (amount: number) => void;
   setSomeGameSettings: (type: string, value: unknown) => Promise<void>;
 }
@@ -49,6 +51,8 @@ const Home: React.FC<Props> = ({
   rpgGameData,
   getGameData,
   handleAchieveVictory,
+  handleAchieveDefeat,
+  handleEscapeBattle,
   modifyGold,
   setSomeGameSettings,
 }) => {
@@ -184,9 +188,25 @@ const Home: React.FC<Props> = ({
               战斗取得胜利
             </Button>
           </Tooltip>
-          <div className="home-future-slot" aria-label="后续功能预留区域">
-            后续功能预留
-          </div>
+          <Tooltip title="需处于战斗状态">
+            <Button
+              className="home-action-card"
+              size="small"
+              danger
+              onClick={handleAchieveDefeat}
+            >
+              战斗强制失败
+            </Button>
+          </Tooltip>
+          <Tooltip title="需处于战斗状态">
+            <Button
+              className="home-action-card"
+              size="small"
+              onClick={handleEscapeBattle}
+            >
+              战斗强制逃跑
+            </Button>
+          </Tooltip>
         </div>
       </section>
     </div>

@@ -157,14 +157,46 @@
 
     "GET /performVictory": async (req, res) => {
       try {
-        if ($gameParty.inBattle()) {
+        if ($gameParty.inBattle() && BattleManager._phase !== "battleEnd") {
           $gameParty.performVictory();
           sendJson(res, 200, { success: true });
         } else {
           sendJson(res, 200, { success: false });
         }
       } catch (e) {
-        sendError(res, 500, "执行失败", { error: e.message });
+        sendError(res, 500, "执行胜利失败", { error: e.message });
+      }
+    },
+
+    "GET /performDefeat": async (req, res) => {
+      try {
+        if ($gameParty.inBattle() && BattleManager._phase !== "battleEnd") {
+          $gameParty.members().forEach((actor) => {
+            actor.addNewState(actor.deathStateId());
+          });
+          BattleManager.processDefeat();
+          sendJson(res, 200, { success: true });
+        } else {
+          sendJson(res, 200, { success: false });
+        }
+      } catch (e) {
+        sendError(res, 500, "执行战败失败", { error: e.message });
+      }
+    },
+
+    "GET /performEscape": async (req, res) => {
+      try {
+        if ($gameParty.inBattle() && BattleManager._phase !== "battleEnd") {
+          $gameParty.performEscape();
+          SoundManager.playEscape();
+          BattleManager._escaped = true;
+          BattleManager.processEscape();
+          sendJson(res, 200, { success: true });
+        } else {
+          sendJson(res, 200, { success: false });
+        }
+      } catch (e) {
+        sendError(res, 500, "执行逃跑失败", { error: e.message });
       }
     },
 

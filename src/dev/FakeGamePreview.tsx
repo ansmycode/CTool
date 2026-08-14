@@ -40,6 +40,8 @@ export default function FakeGamePreview() {
     setActorData: doNothing,
     sendTranslationData: doNothing,
     achieveVictory: doNothing,
+    achieveDefeat: doNothing,
+    escapeBattle: doNothing,
     setSomeGameSettings: doNothing,
   });
 
