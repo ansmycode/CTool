@@ -10,13 +10,15 @@
     "dev:electron": "wait-on http://127.0.0.1:5173 && electron .",
     "build": "tsc -b && vite build",
     "test:ai": "node --test tests/ai/*.test.js",
+    "test:backup": "node --test tests/backup/*.test.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "build:main": "esbuild src/electron/main.js --bundle --platform=node --target=node18 --format=esm --outdir=dist-electron",
     "dist": "npm run build && electron-builder --win"
   },
   "dependencies": {
-    "archiver": "^7.0.1"
+    "archiver": "^7.0.1",
+    "extract-zip": "^2.0.1"
   },
   "devDependencies": {
     "@ant-design/icons": "^5.6.1",

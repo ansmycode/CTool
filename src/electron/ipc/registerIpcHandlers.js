@@ -4,8 +4,7 @@
 将实际业务转交给服务层
  */
 
-import { dialog, ipcMain, shell } from "electron";
-import path from "path";
+import { dialog, ipcMain } from "electron";
 import { detectGame } from "../services/gameDetectionService.js";
 import { deleteHistory, readHistory } from "../services/gameHistoryService.js";
 import {
@@ -21,6 +20,12 @@ import {
 import { testAIProviderConnection } from "../ai/providerClient.js";
 import { runAITranslation } from "../ai/translator.js";
 import { runExclusiveAITranslation } from "../ai/taskRegistry.js";
+import {
+  createGameDataBackup,
+  listGameDataBackups,
+  restoreGameDataBackup,
+} from "../services/gameDataBackupService.js";
+import { openPathInFileManager } from "../services/fileManagerService.js";
 
 function safeAIError(error, fallback) {
   return new Error(error instanceof Error ? error.message : fallback);
@@ -62,17 +67,37 @@ export function registerIpcHandlers({ getMainWindow, gameInjectionService }) {
 
   ipcMain.handle(
     "built-in-translation",
-    async (event, { gamePath, engine }) => {
+    async (event, { gamePath, engine, currentBackupPath }) => {
       if (!gamePath || !engine) return;
-      if (engine !== "MV" && engine !== "MZ") return;
 
       const chooseFile = await dialog.showOpenDialog(getMainWindow(), {
         properties: ["openFile"],
         filters: [{ name: "JSON Files", extensions: ["json"] }],
       });
-      if (!chooseFile) return;
+      const translationFilePath = chooseFile.filePaths[0];
+      if (chooseFile.canceled || !translationFilePath) return null;
 
-      return processBuiltInTranslation(event, chooseFile, gamePath);
+      return processBuiltInTranslation(
+        event,
+        translationFilePath,
+        { gamePath, engine },
+        currentBackupPath,
+      );
+    },
+  );
+
+  ipcMain.handle("built-in:list-backups", async (_event, gameInfo) => {
+    return listGameDataBackups(gameInfo);
+  });
+
+  ipcMain.handle("built-in:create-backup", async (event, gameInfo) => {
+    return createGameDataBackup(gameInfo, event);
+  });
+
+  ipcMain.handle(
+    "built-in:restore-backup",
+    async (event, { gameInfo, backupPath }) => {
+      return restoreGameDataBackup(gameInfo, backupPath, event);
     },
   );
 
@@ -147,17 +172,8 @@ export function registerIpcHandlers({ getMainWindow, gameInjectionService }) {
     }
   });
 
-  ipcMain.handle("open-game-dir", async (_event, gamePath) => {
-    try {
-      const dir = path.dirname(gamePath);
-      if (dir) {
-        shell.openPath(dir);
-        return { success: true };
-      }
-      return { success: false, message: "游戏不存在" };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
+  ipcMain.handle("open-path-in-file-manager", async (_event, targetPath) => {
+    return openPathInFileManager(targetPath);
   });
 
   ipcMain.handle("delete-game-history", async (_event, gamePath) => {

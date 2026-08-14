@@ -21,8 +21,8 @@ const GameHistory: React.FC<Props> = ({ historyLaunchGame }) => {
     getGameHistory();
   }, []);
 
-  const openGameDir = async (gamePath: string) => {
-    const result: any = await window.electronAPI.openGameDir(gamePath);
+  const handleOpenGameLocation = async (gamePath: string) => {
+    const result = await window.electronAPI.openPathInFileManager(gamePath);
     if (!result.success) {
       api.error({
         message: result?.message,
@@ -71,7 +71,7 @@ const GameHistory: React.FC<Props> = ({ historyLaunchGame }) => {
                   <Button onClick={() => historyLaunchGame(item)}>
                     启动游戏
                   </Button>
-                  <Button onClick={() => openGameDir(item.gamePath)}>
+                  <Button onClick={() => handleOpenGameLocation(item.gamePath)}>
                     打开游戏位置
                   </Button>
                   <Popconfirm

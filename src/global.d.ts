@@ -8,6 +8,20 @@ import type {
 } from "@/types/AITranslation";
 
 declare global {
+  interface BuiltInBackupInfo {
+    filePath: string;
+    fileName: string;
+    createdAt: string;
+    displayTime: string;
+    size: number;
+    legacy: boolean;
+  }
+
+  interface BuiltInBackupList {
+    backupDirectory: string;
+    backups: BuiltInBackupInfo[];
+  }
+
   interface Window {
     electronAPI: {
       applyFilters: (args: { gameInfo: any }) => Promise<void>;
@@ -20,7 +34,23 @@ declare global {
       builtInTranslation: (args: {
         gamePath: string | null;
         engine: string | null;
-      }) => Promise<void>;
+        currentBackupPath?: string | null;
+      }) => Promise<{ status: string; message: string } | null>;
+      listBuiltInBackups: (gameInfo: {
+        gamePath: string;
+        engine: string;
+      }) => Promise<BuiltInBackupList>;
+      createBuiltInBackup: (gameInfo: {
+        gamePath: string;
+        engine: string;
+      }) => Promise<{
+        backupDirectory: string;
+        backup: BuiltInBackupInfo;
+      }>;
+      restoreBuiltInBackup: (
+        gameInfo: { gamePath: string; engine: string },
+        backupPath: string,
+      ) => Promise<{ success: boolean; backupPath: string }>;
       loadJson: () => Promise<void>;
       selectAITranslationJson: () => Promise<AITranslationFileSelection | null>;
       prepareAITranslationWorkFile: (
@@ -34,7 +64,11 @@ declare global {
         config: AITranslationAPIConfig,
       ) => Promise<AITranslationPreparation>;
       readGameHistory: () => Promise<any[]>;
-      openGameDir: (gamePath: string) => Promise<void>;
+      openPathInFileManager: (targetPath: string) => Promise<{
+        success: boolean;
+        path?: string;
+        message?: string;
+      }>;
       deleteGameHistory: (gamePath: string) => Promise<void>;
       onReceiveMessage: (
         channel: string,
