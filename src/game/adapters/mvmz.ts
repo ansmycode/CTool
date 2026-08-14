@@ -112,6 +112,14 @@ export const mvmzAdapter: GameEngineAdapter = {
     await get("/performVictory", {});
   },
 
+  async achieveDefeat(): Promise<void> {
+    await get("/performDefeat", {});
+  },
+
+  async escapeBattle(): Promise<void> {
+    await get("/performEscape", {});
+  },
+
   async setSomeGameSettings(type: string, value: any): Promise<void> {
     await post("/setSomeGameSettings", { type, value });
   },

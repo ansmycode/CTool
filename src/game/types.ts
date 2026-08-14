@@ -35,6 +35,8 @@ export interface GameEngineAdapter {
   setActorData?(actor: any): Promise<void>;
   sendTranslationData?(translated: any): Promise<void>;
   achieveVictory?(): Promise<void>;
+  achieveDefeat?(): Promise<void>;
+  escapeBattle?(): Promise<void>;
   setSomeGameSettings(type: string, value: any): Promise<void>;
 }
 

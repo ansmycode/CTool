@@ -25,6 +25,8 @@ interface CheatMenuContext {
   setActorData: (actor: any) => Promise<void>;
   sendTranslationData: (translated: any) => Promise<void>;
   achieveVictory: () => Promise<void>;
+  achieveDefeat: () => Promise<void>;
+  escapeBattle: () => Promise<void>;
   setSomeGameSettings: (type: string, value: any) => Promise<void>;
 }
 
@@ -57,6 +59,8 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
         rpgGameData={context.gameData}
         getGameData={context.getGameData}
         handleAchieveVictory={context.achieveVictory}
+        handleAchieveDefeat={context.achieveDefeat}
+        handleEscapeBattle={context.escapeBattle}
         modifyGold={context.modifyGold}
         setSomeGameSettings={context.setSomeGameSettings}
       />
