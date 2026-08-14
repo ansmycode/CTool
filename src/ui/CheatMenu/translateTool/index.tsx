@@ -102,13 +102,6 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
     }
   };
 
-  const openBuiltInModal = () => {
-    setBuiltState("warning");
-    setCurrentBackupPath(null);
-    setBuiltModalShow(true);
-    void refreshBackups();
-  };
-
   const handleCreateBackup = async () => {
     try {
       const result = await window.electronAPI.createBuiltInBackup(gameBackupInfo);
@@ -242,9 +235,11 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
             提取文本
           </Button>
         </Tooltip>
-        <Button size="small" onClick={openBuiltInModal}>
-          自动内嵌文本
-        </Button>
+        <Tooltip title="该功能兼容性尚未完善，暂时不可用">
+          <Button size="small" disabled>
+            自动内嵌文本（暂不可用）
+          </Button>
+        </Tooltip>
       </div>
       <AITranslation />
       <ExtractModal

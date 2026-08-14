@@ -9,44 +9,46 @@ import {
   restoreGameDataBackup,
 } from "../../src/electron/services/gameDataBackupService.js";
 
-function createFakeGame() {
+function createFakeGame(engine) {
   const gameDir = fs.mkdtempSync(path.join(os.tmpdir(), "ctool-backup-"));
   const gamePath = path.join(gameDir, "Game.exe");
-  const dataPath = path.join(gameDir, "www", "data");
+  const dataPath = path.join(gameDir, engine === "MV" ? "www/data" : "data");
   fs.mkdirSync(dataPath, { recursive: true });
   fs.writeFileSync(gamePath, "");
   fs.writeFileSync(
     path.join(dataPath, "System.json"),
     JSON.stringify({ gameTitle: "原始标题" }),
   );
-  return { gameDir, gamePath, dataPath, engine: "MZ" };
+  return { gameDir, gamePath, dataPath, engine };
 }
 
-test("MV/MZ 备份保存在游戏 CTool_Backups 目录并可还原", async () => {
-  const game = createFakeGame();
-  try {
-    const created = await createGameDataBackup(game);
-    assert.equal(path.dirname(created.backup.filePath), path.join(game.gameDir, "CTool_Backups"));
-    assert.match(created.backup.fileName, /^data_backup_.+\.zip$/);
+for (const engine of ["MV", "MZ"]) {
+  test(`${engine} 备份使用固定数据目录并可还原`, async () => {
+    const game = createFakeGame(engine);
+    try {
+      const created = await createGameDataBackup(game);
+      assert.equal(path.dirname(created.backup.filePath), path.join(game.gameDir, "CTool_Backups"));
+      assert.match(created.backup.fileName, /^data_backup_.+\.zip$/);
 
-    const listed = listGameDataBackups(game);
-    assert.equal(listed.backups.length, 1);
-    fs.writeFileSync(
-      path.join(game.dataPath, "System.json"),
-      JSON.stringify({ gameTitle: "修改后的标题" }),
-    );
-    fs.writeFileSync(path.join(game.dataPath, "Extra.json"), "{}");
+      const listed = listGameDataBackups(game);
+      assert.equal(listed.backups.length, 1);
+      fs.writeFileSync(
+        path.join(game.dataPath, "System.json"),
+        JSON.stringify({ gameTitle: "修改后的标题" }),
+      );
+      fs.writeFileSync(path.join(game.dataPath, "Extra.json"), "{}");
 
-    await restoreGameDataBackup(game, created.backup.filePath);
-    const restored = JSON.parse(
-      fs.readFileSync(path.join(game.dataPath, "System.json"), "utf8"),
-    );
-    assert.equal(restored.gameTitle, "原始标题");
-    assert.equal(fs.existsSync(path.join(game.dataPath, "Extra.json")), false);
-  } finally {
-    fs.rmSync(game.gameDir, { recursive: true, force: true });
-  }
-});
+      await restoreGameDataBackup(game, created.backup.filePath);
+      const restored = JSON.parse(
+        fs.readFileSync(path.join(game.dataPath, "System.json"), "utf8"),
+      );
+      assert.equal(restored.gameTitle, "原始标题");
+      assert.equal(fs.existsSync(path.join(game.dataPath, "Extra.json")), false);
+    } finally {
+      fs.rmSync(game.gameDir, { recursive: true, force: true });
+    }
+  });
+}
 
 test("不支持的引擎会在备份前明确拒绝", async () => {
   await assert.rejects(

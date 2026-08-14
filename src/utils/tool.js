@@ -88,6 +88,10 @@ function formatDate(date) {
   return `${y}/${m}/${d} ${hh}:${mm}:${ss}`;
 }
 
+/*
+ * 历史遗留：旧版会递归查找 data 目录并在游戏根目录创建备份。
+ * MV/MZ 的目录结构现已按引擎直接解析，此入口与递归查找方法不再使用，仅保留供历史参考。
+ *
 //备份
 export async function backupDataFolder(gameDir, event) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -165,3 +169,4 @@ export function findFileOrDirWithDepthLimit(
 
   return null;
 }
+*/

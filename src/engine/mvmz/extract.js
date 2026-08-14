@@ -4,7 +4,6 @@
 */
 import fs from "fs";
 import path from "path";
-import { findFileOrDirWithDepthLimit } from "../../utils/tool.js";
 
 const keysToReplace = [
   "characterName",
@@ -81,21 +80,19 @@ function extractFromObject(obj, collectedMap) {
 
 /**
  * 提取游戏的文本
- * @param {string} gameDir 起始目录
+ * @param {string} gameDir 游戏可执行文件所在目录
+ * @param {"MV"|"MZ"} engine 游戏引擎
  */
-export async function ExtractText(gameDir) {
-  const target = ["data"];
-  const maxDepth = 3;
+export async function ExtractText(gameDir, engine) {
+  const dataPath = path.join(gameDir, engine === "MV" ? "www/data" : "data");
   const collectedMap = new Map();
 
-  const found = findFileOrDirWithDepthLimit(gameDir, target, maxDepth);
-  console.log(found);
-  if (found.path !== "" || found.path !== undefined) {
+  if (fs.existsSync(dataPath)) {
     try {
       console.log("reading start");
       const results = [];
 
-      found.files.forEach((filePath) => {
+      fs.readdirSync(dataPath).map((file) => path.join(dataPath, file)).forEach((filePath) => {
         if (!filePath.endsWith(".json")) return;
         let content;
         try {
