@@ -1,12 +1,9 @@
-export type GameCapability =
-  | "gold"
-  | "items"
-  | "armors"
-  | "weapons"
-  | "variables"
-  | "switches"
-  | "actors"
-  | "translation";
+import type {
+  GameFeatureKey,
+  GameFeatureReaders,
+} from "@/game/features";
+
+export type GameCapability = GameFeatureKey | "translation";
 
 export type GameShortcutActionId =
   | "toggleThrough"
@@ -28,29 +25,11 @@ export interface GameShortcutPolicy {
   readonly blockedKeysWithoutCtrlOrAlt: Readonly<Record<string, string>>;
 }
 
-export interface GameData {
-  gold: number;
-  actors: any[];
-  armors: any[];
-  items: any[];
-  weapons: any[];
-  isEncounterEnabled: boolean;
-  isFormationEnabled: boolean;
-  variables: any[];
-  switches: any[];
-  classes: any[];
-  playerSpeed: number;
-  gameSpeed: number;
-  through: boolean;
-  oneHitKillEnabled: boolean;
-}
-
 export interface GameEngineAdapter {
-  readonly capabilities: ReadonlySet<GameCapability>;
+  readonly features: GameFeatureReaders;
   readonly shortcutActions: ReadonlySet<GameShortcutActionId>;
   readonly shortcutPolicy: GameShortcutPolicy;
   init(): Promise<boolean>;
-  getData(): Promise<GameData>;
   setGameGold(amount: number): Promise<void>;
   modifyVariables?(id: number, value: number | string): Promise<void>;
   modifySwitches?(id: number, value: boolean): Promise<void>;

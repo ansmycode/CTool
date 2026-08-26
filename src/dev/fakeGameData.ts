@@ -1,13 +1,14 @@
-import type { GameData } from "@/game/types";
+import type { GameFeatureState } from "@/game/features";
 
 /** 仅用于开发页面预览的固定演示数据。 */
-export const fakeGameData: GameData = {
+const fakeGameData = {
   gold: 12800,
   actors: [
     {
       id: 1,
       name: "艾莉亚",
       classId: 1,
+      className: "战士",
       level: 12,
       exp: 1840,
       mhp: 620,
@@ -25,6 +26,7 @@ export const fakeGameData: GameData = {
       id: 2,
       name: "诺亚",
       classId: 2,
+      className: "魔法师",
       level: 10,
       exp: 1320,
       mhp: 420,
@@ -42,6 +44,7 @@ export const fakeGameData: GameData = {
       id: 3,
       name: "米娅",
       classId: 3,
+      className: "游侠",
       level: 8,
       exp: 760,
       mhp: 510,
@@ -114,4 +117,25 @@ export const fakeGameData: GameData = {
   gameSpeed: 1,
   through: false,
   oneHitKillEnabled: false,
+};
+
+export const fakeGameFeatures: GameFeatureState = {
+  overview: {
+    gold: fakeGameData.gold,
+    isEncounterEnabled: fakeGameData.isEncounterEnabled,
+    isFormationEnabled: fakeGameData.isFormationEnabled,
+    playerSpeed: fakeGameData.playerSpeed,
+    gameSpeed: fakeGameData.gameSpeed,
+    through: fakeGameData.through,
+    oneHitKillEnabled: fakeGameData.oneHitKillEnabled,
+  },
+  items: fakeGameData.items,
+  armors: fakeGameData.armors,
+  weapons: fakeGameData.weapons,
+  variables: fakeGameData.variables,
+  switches: fakeGameData.switches,
+  actors: {
+    actors: fakeGameData.actors,
+    classes: fakeGameData.classes,
+  },
 };

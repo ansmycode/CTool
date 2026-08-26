@@ -2,9 +2,9 @@ import { lazy, Suspense } from "react";
 import { Spin } from "antd";
 import type { ReactNode } from "react";
 import type { TabsProps } from "antd";
+import type { GameFeatureKey } from "@/game/features";
 import type {
   GameCapability,
-  GameData,
   GameShortcutAction,
   GameShortcutActionId,
   GameShortcutPolicy,
@@ -25,9 +25,7 @@ const TranslateTool = lazy(() => import("./translateTool/index"));
 const ShortcutSettings = lazy(() => import("./shortcuts/index"));
 
 interface CheatMenuContext {
-  gameData: GameData | null;
   gameInfo: any;
-  getGameData: () => void;
   modifyGold: (amount: number) => Promise<void>;
   modifyVariable: (id: number, value: number | string) => Promise<void>;
   modifySwitch: (id: number, value: boolean) => Promise<void>;
@@ -55,6 +53,7 @@ interface CheatMenuTabDefinition {
   key: string;
   label: string;
   capability?: GameCapability;
+  feature?: GameFeatureKey;
   render: (context: CheatMenuContext) => ReactNode;
 }
 
@@ -74,11 +73,10 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
   {
     key: "1",
     label: "主页",
-    capability: "gold",
+    capability: "overview",
+    feature: "overview",
     render: (context) => (
       <Home
-        rpgGameData={context.gameData}
-        getGameData={context.getGameData}
         handleAchieveVictory={context.achieveVictory}
         handleAchieveDefeat={context.achieveDefeat}
         handleEscapeBattle={context.escapeBattle}
@@ -91,9 +89,9 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
     key: "2",
     label: "物品: 道具",
     capability: "items",
+    feature: "items",
     render: (context) => (
       <ItemsTable
-        ItemsData={context.gameData?.items}
         handleGainItem={context.gainItem}
       />
     ),
@@ -102,9 +100,9 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
     key: "3",
     label: "物品: 防具",
     capability: "armors",
+    feature: "armors",
     render: (context) => (
       <ArmorTable
-        ArmorsData={context.gameData?.armors}
         handleGainItem={context.gainItem}
       />
     ),
@@ -113,9 +111,9 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
     key: "4",
     label: "物品: 武器",
     capability: "weapons",
+    feature: "weapons",
     render: (context) => (
       <WeaponTable
-        WeaponsData={context.gameData?.weapons}
         handleGainItem={context.gainItem}
       />
     ),
@@ -124,9 +122,9 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
     key: "5",
     label: "变量",
     capability: "variables",
+    feature: "variables",
     render: (context) => (
       <VariablesTable
-        variables={context.gameData?.variables}
         changeVariables={context.modifyVariable}
       />
     ),
@@ -135,9 +133,9 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
     key: "6",
     label: "开关",
     capability: "switches",
+    feature: "switches",
     render: (context) => (
       <SwitchesTable
-        switches={context.gameData?.switches}
         changeSwitches={context.modifySwitch}
       />
     ),
@@ -146,10 +144,9 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
     key: "7",
     label: "角色",
     capability: "actors",
+    feature: "actors",
     render: (context) => (
       <ActorTable
-        actorData={context.gameData?.actors ?? []}
-        classData={context.gameData?.classes ?? []}
         setActorInTeam={context.setInTeam}
         setActorData={context.setActorData}
       />
@@ -182,6 +179,10 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
     ),
   },
 ];
+
+export function getTabFeatureKey(tabKey: string) {
+  return tabDefinitions.find(({ key }) => key === tabKey)?.feature;
+}
 
 export function createCheatMenuTabs(
   capabilities: ReadonlySet<GameCapability>,

@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { notification, Tabs } from "antd";
 import { CloseCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import LoadingOverlay from "@/components/LoadingOverlay";
-import { useGameData } from "@/game/useGameData";
+import { GameFeatureProvider } from "@/game/GameFeatureContext";
+import { useGameFeatures } from "@/game/useGameFeatures";
 import { getShortcutRestrictionReason } from "@/game/shortcutPolicy";
-import { createCheatMenuTabs } from "./tabRegistry";
+import { createCheatMenuTabs, getTabFeatureKey } from "./tabRegistry";
+import type { GameFeatureKey } from "@/game/features";
 import type { GameShortcutActionId } from "@/game/types";
 import type {
   ShortcutBindings,
@@ -45,9 +47,9 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   const runningShortcutActions = useRef(new Set<GameShortcutActionId>());
   const [api, contextHolder] = notification.useNotification();
   const {
-    gameData,
+    features,
     capabilities,
-    getGameData,
+    refreshFeature,
     modifyGold,
     modifyVariable,
     modifySwitch,
@@ -62,15 +64,17 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     shortcutActions,
     shortcutPolicy,
     executeShortcutAction,
-  } = useGameData(gameInfo.engine);
+  } = useGameFeatures(gameInfo.engine);
 
   console.log("游戏启动" + isGameStarting);
   console.log("游戏初始化" + gameReady);
 
-  const getGameDataWithNotify = useCallback(() => {
+  const getFeatureDataWithNotify = useCallback(async (
+    feature: GameFeatureKey,
+  ) => {
     if (!gameReady) return;
 
-    const notifyKey = "get-game-data";
+    const notifyKey = `get-game-data-${feature}`;
     api.open({
       key: notifyKey,
       message: "正在获取游戏数据",
@@ -79,7 +83,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     });
 
     try {
-      getGameData();
+      await refreshFeature(feature);
       api.destroy(notifyKey);
     } catch (error: any) {
       api.destroy(notifyKey);
@@ -91,16 +95,25 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
       });
       throw error;
     }
-  }, [gameReady]);
+  }, [api, gameReady, refreshFeature]);
+
+  const refreshActiveFeature = useCallback(() => {
+    const feature = getTabFeatureKey(activeKey);
+    if (feature) void getFeatureDataWithNotify(feature);
+  }, [activeKey, getFeatureDataWithNotify]);
 
   useEffect(() => {
     if (!gameReady) return;
 
-    window.addEventListener("focus", getGameDataWithNotify);
+    window.addEventListener("focus", refreshActiveFeature);
     return () => {
-      window.removeEventListener("focus", getGameDataWithNotify);
+      window.removeEventListener("focus", refreshActiveFeature);
     };
-  }, [getGameDataWithNotify]);
+  }, [gameReady, refreshActiveFeature]);
+
+  useEffect(() => {
+    refreshActiveFeature();
+  }, [gameReady, activeKey, refreshActiveFeature]);
 
   useEffect(() => {
     return window.electronAPI.onReceiveMessage(
@@ -228,9 +241,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   );
 
   const menuList = createCheatMenuTabs(capabilities, {
-    gameData,
     gameInfo,
-    getGameData: getGameDataWithNotify,
     modifyGold,
     modifyVariable,
     modifySwitch,
@@ -255,13 +266,18 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     <div className="cheat-menu">
       {contextHolder}
       <LoadingOverlay visible={!gameReady} />
-      <Tabs
-        className="cheat-menu-tabs"
-        activeKey={activeKey}
-        items={menuList}
-        onChange={setActiveKey}
-        type="card"
-      />
+      <GameFeatureProvider
+        features={features}
+        refresh={getFeatureDataWithNotify}
+      >
+        <Tabs
+          className="cheat-menu-tabs"
+          activeKey={activeKey}
+          items={menuList}
+          onChange={setActiveKey}
+          type="card"
+        />
+      </GameFeatureProvider>
     </div>
   );
 };

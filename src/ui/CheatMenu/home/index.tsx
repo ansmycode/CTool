@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Button, InputNumber, Switch, Tooltip, Typography } from "antd";
-import type { GameData } from "@/game/types";
+import { useGameFeature } from "@/game/GameFeatureContext";
 import "./index.css";
 
 interface Props {
-  rpgGameData: GameData | null;
-  getGameData: () => void;
   handleAchieveVictory: () => void;
   handleAchieveDefeat: () => void;
   handleEscapeBattle: () => void;
@@ -48,13 +46,13 @@ const SettingSwitch: React.FC<SettingSwitchProps> = ({
 };
 
 const Home: React.FC<Props> = ({
-  rpgGameData,
-  getGameData,
   handleAchieveVictory,
   handleAchieveDefeat,
   modifyGold,
   setSomeGameSettings,
 }) => {
+  const { data: rpgGameData, refresh: getGameData } =
+    useGameFeature("overview");
   const [data, setData] = useState(rpgGameData);
 
   useEffect(() => {

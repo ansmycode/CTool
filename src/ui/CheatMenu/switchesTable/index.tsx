@@ -1,12 +1,12 @@
 import React from "react";
 import { Switch, Table } from "antd";
+import { useGameFeature } from "@/game/GameFeatureContext";
 import { TableSearchBar } from "@/ui/CheatMenu/TableSearchBar";
 import { useTableDraftValues } from "@/ui/CheatMenu/useTableDraftValues";
 import { useTableSearch } from "@/ui/CheatMenu/useTableSearch";
 import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
 
 interface Props {
-  switches: Item[] | undefined;
   changeSwitches: (switchId: number, value: boolean) => void;
 }
 
@@ -22,7 +22,8 @@ const getSearchValues = (item: Item) => [
   item.switchesValue ? "开 true" : "关 false",
 ];
 
-const SwitchesTable: React.FC<Props> = ({ switches, changeSwitches }) => {
+const SwitchesTable: React.FC<Props> = ({ changeSwitches }) => {
+  const { data: switches } = useGameFeature("switches");
   const { containerRef, scrollY } = useTableScrollY();
   const { getDraftValue, setDraftValue } =
     useTableDraftValues<boolean>(switches);

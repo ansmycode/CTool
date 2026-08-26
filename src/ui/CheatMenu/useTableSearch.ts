@@ -1,7 +1,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
 
 export function useTableSearch<T>(
-  data: T[] | undefined,
+  data: T[] | null | undefined,
   getSearchValues: (item: T) => unknown[],
 ) {
   const [query, setQuery] = useState("");

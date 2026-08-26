@@ -94,104 +94,121 @@
     };
   }
 
+  function getOverviewData() {
+    return {
+      gold: $gameParty.gold(),
+      isEncounterEnabled: $gameSystem.isEncounterEnabled(),
+      isFormationEnabled: $gameSystem.isFormationEnabled(),
+      playerSpeed: $gamePlayer.moveSpeed(),
+      gameSpeed: gameSpeedRate,
+      through: $gamePlayer._through,
+      oneHitKillEnabled,
+    };
+  }
+
+  function getInventoryData(database, inventory) {
+    return database
+      .filter((item) => item !== null)
+      .map((item) => ({
+        ...item,
+        playerHasCount: inventory[item.id] || 0,
+      }));
+  }
+
+  function getVariablesData() {
+    return $dataSystem.variables
+      .filter((item) => item !== null)
+      .map((item, index) => ({
+        id: index,
+        variablesKey: item,
+        variablesValue: $gameVariables._data[index],
+      }));
+  }
+
+  function getSwitchesData() {
+    return $dataSystem.switches
+      .filter((item) => item !== null)
+      .map((item, index) => ({
+        id: index,
+        switchesKey: item,
+        switchesValue: $gameSwitches._data[index],
+      }));
+  }
+
+  function getActorsData() {
+    const actors = $gameActors._data
+      .filter((item) => item !== null)
+      .map((actor) => ({
+        id: actor.actorId(),
+        inTeam: $gameParty._actors.includes(actor.actorId()),
+        name: actor.name(),
+        level: actor.level,
+        classId: actor.currentClass().id,
+        className: actor.currentClass().name,
+        exp: actor.currentExp(),
+        mhp: actor.mhp,
+        mmp: actor.mmp,
+        tp: actor.tp,
+        atk: actor.atk,
+        def: actor.def,
+        mat: actor.mat,
+        mdf: actor.mdf,
+        agi: actor.agi,
+        luk: actor.luk,
+      }));
+
+    return {
+      actors,
+      classes: $dataClasses.filter((item) => item !== null),
+    };
+  }
+
+  function sendGameData(res, getData, errorMessage) {
+    try {
+      sendJson(res, 200, { data: getData(), success: true });
+    } catch (e) {
+      sendError(res, 500, errorMessage, { error: e.message });
+    }
+  }
+
   // ======== 路由表 ========
 
   const routes = {
     "GET /ping": async (req, res) => {
       sendJson(res, 200, { success: true });
     },
-    "GET /getGameData": async (req, res) => {
-      try {
-        const gold = $gameParty.gold();
-        const allMembers = $gameActors._data
-          .filter((item) => item !== null)
-          .map((actor) => {
-            if (actor) {
-              return {
-                id: actor.actorId(),
-                inTeam: $gameParty._actors.includes(actor.actorId()),
-                name: actor.name(),
-                level: actor.level,
-                classId: actor.currentClass().id,
-                className: actor.currentClass().name,
-                exp: actor.currentExp(),
-                mhp: actor.mhp,
-                mmp: actor.mmp,
-                tp: actor.tp,
-                atk: actor.atk,
-                def: actor.def,
-                mat: actor.mat,
-                mdf: actor.mdf,
-                agi: actor.agi,
-                luk: actor.luk,
-              };
-            }
-          });
-        const allArmors = $dataArmors
-          .filter((item) => item !== null)
-          .map((item) => {
-            if (item) {
-              item.playerHasCount = $gameParty._armors[item.id] || 0;
-              return item;
-            }
-          });
-        const allItem = $dataItems
-          .filter((item) => item !== null)
-          .map((item) => {
-            if (item) {
-              item.playerHasCount = $gameParty._items[item.id] || 0;
-              return item;
-            }
-          });
-        const allWeapons = $dataWeapons
-          .filter((item) => item !== null)
-          .map((item) => {
-            if (item) {
-              item.playerHasCount = $gameParty._weapons[item.id] || 0;
-              return item;
-            }
-          });
-
-        const variables = $dataSystem.variables
-          .filter((item) => item !== null)
-          .map((item, index) => ({
-            id: index,
-            variablesKey: item,
-            variablesValue: $gameVariables._data[index],
-          }));
-
-        const switches = $dataSystem.switches
-          .filter((item) => item !== null)
-          .map((item, index) => ({
-            id: index,
-            switchesKey: item,
-            switchesValue: $gameSwitches._data[index],
-          }));
-
-        const classList = $dataClasses.filter((item) => item !== null);
-
-        sendJson(res, 200, {
-          data: {
-            gold,
-            allMembers,
-            allArmors,
-            allItem,
-            allWeapons,
-            isEncounterEnabled: $gameSystem.isEncounterEnabled(),
-            isFormationEnabled: $gameSystem.isFormationEnabled(),
-            variables,
-            switches,
-            classList,
-            playerSpeed: $gamePlayer.moveSpeed(),
-            gameSpeed: gameSpeedRate,
-            through: $gamePlayer._through,
-            oneHitKillEnabled,
-          },
-          success: true,
-        });
-      } catch (e) {
-        sendError(res, 500, "获取游戏数据失败", { error: e.message });
-      }
+    "GET /getOverviewData": async (_req, res) => {
+      sendGameData(res, getOverviewData, "获取主页数据失败");
+    },
+    "GET /getItemsData": async (_req, res) => {
+      sendGameData(
+        res,
+        () => getInventoryData($dataItems, $gameParty._items),
+        "获取道具数据失败",
+      );
+    },
+    "GET /getArmorsData": async (_req, res) => {
+      sendGameData(
+        res,
+        () => getInventoryData($dataArmors, $gameParty._armors),
+        "获取防具数据失败",
+      );
+    },
+    "GET /getWeaponsData": async (_req, res) => {
+      sendGameData(
+        res,
+        () => getInventoryData($dataWeapons, $gameParty._weapons),
+        "获取武器数据失败",
+      );
+    },
+    "GET /getVariablesData": async (_req, res) => {
+      sendGameData(res, getVariablesData, "获取变量数据失败");
+    },
+    "GET /getSwitchesData": async (_req, res) => {
+      sendGameData(res, getSwitchesData, "获取开关数据失败");
+    },
+    "GET /getActorsData": async (_req, res) => {
+      sendGameData(res, getActorsData, "获取角色数据失败");
     },
 
     "POST /setGold": async (req, res) => {
