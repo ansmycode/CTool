@@ -61,6 +61,13 @@ export default function FakeGamePreview() {
     ],
     shortcutBindings: { toggleThrough: "F6" },
     shortcutRegistrationResults: { toggleThrough: true },
+    shortcutsEnabled: true,
+    shortcutPolicy: {
+      blockedKeysWithoutCtrlOrAlt: {
+        F5: "MV/MZ 会把 F5 作为游戏重载键，可能导致游戏直接重新启动",
+      },
+    },
+    setShortcutsEnabled: () => {},
     setShortcutBinding: () => {},
   });
 

@@ -24,6 +24,18 @@
   border-radius: 6px;
 }
 
+.shortcut-hint.is-disabled {
+  color: #727985;
+  background: #f1f2f4;
+  border-color: #dedfe2;
+}
+
+.shortcut-master-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .shortcut-list {
   overflow: hidden;
   background: #fff;
@@ -56,6 +68,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.shortcut-title-line {
+  flex-wrap: wrap;
 }
 
 .shortcut-copy .ant-typography-secondary {

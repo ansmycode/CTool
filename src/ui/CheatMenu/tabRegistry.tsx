@@ -7,6 +7,7 @@ import type {
   GameData,
   GameShortcutAction,
   GameShortcutActionId,
+  GameShortcutPolicy,
 } from "@/game/types";
 import type {
   ShortcutBindings,
@@ -41,6 +42,9 @@ interface CheatMenuContext {
   shortcutActions: GameShortcutAction[];
   shortcutBindings: ShortcutBindings;
   shortcutRegistrationResults: ShortcutRegistrationResults;
+  shortcutsEnabled: boolean;
+  shortcutPolicy: GameShortcutPolicy;
+  setShortcutsEnabled: (enabled: boolean) => void;
   setShortcutBinding: (
     actionId: GameShortcutActionId,
     accelerator: string | null,
@@ -170,6 +174,9 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
         actions={context.shortcutActions}
         bindings={context.shortcutBindings}
         registrationResults={context.shortcutRegistrationResults}
+        enabled={context.shortcutsEnabled}
+        policy={context.shortcutPolicy}
+        onEnabledChange={context.setShortcutsEnabled}
         onBindingChange={context.setShortcutBinding}
       />
     ),

@@ -24,6 +24,10 @@ export interface GameShortcutAction {
   supportedEngines: NonNullable<EngineType>[];
 }
 
+export interface GameShortcutPolicy {
+  readonly blockedKeysWithoutCtrlOrAlt: Readonly<Record<string, string>>;
+}
+
 export interface GameData {
   gold: number;
   actors: any[];
@@ -44,6 +48,7 @@ export interface GameData {
 export interface GameEngineAdapter {
   readonly capabilities: ReadonlySet<GameCapability>;
   readonly shortcutActions: ReadonlySet<GameShortcutActionId>;
+  readonly shortcutPolicy: GameShortcutPolicy;
   init(): Promise<boolean>;
   getData(): Promise<GameData>;
   setGameGold(amount: number): Promise<void>;
