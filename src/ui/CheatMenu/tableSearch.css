@@ -1,0 +1,25 @@
+.game-table-page {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: #f7f8fa;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table-search-bar .ant-input-affix-wrapper {
+  width: min(380px, 70%);
+}
+
+.table-search-bar .ant-typography {
+  flex: none;
+  font-size: 12px;
+}
