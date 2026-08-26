@@ -35,6 +35,26 @@
   let gameSpeedRate = 1;
   let gameSpeedAccumulator = 0;
   let originalSceneManagerUpdateScene = null;
+  let oneHitKillEnabled = false;
+
+  const originalGameActionExecuteHpDamage =
+    Game_Action.prototype.executeHpDamage;
+  Game_Action.prototype.executeHpDamage = function (target, value) {
+    const subject = this.subject();
+    const shouldOneHitKill =
+      oneHitKillEnabled &&
+      value > 0 &&
+      subject &&
+      subject.isActor() &&
+      target &&
+      target.isEnemy();
+
+    originalGameActionExecuteHpDamage.call(
+      this,
+      target,
+      shouldOneHitKill ? target.hp : value,
+    );
+  };
 
   function setGameSpeed(nextRate) {
     nextRate = Number(nextRate);
@@ -165,6 +185,7 @@
             playerSpeed: $gamePlayer.moveSpeed(),
             gameSpeed: gameSpeedRate,
             through: $gamePlayer._through,
+            oneHitKillEnabled,
           },
           success: true,
         });
@@ -380,6 +401,9 @@
         }
         if (type === "through") {
           $gamePlayer._through = value;
+        }
+        if (type === "oneHitKillEnabled") {
+          oneHitKillEnabled = Boolean(value);
         }
         sendJson(res, 200, { success: true });
       } catch (e) {

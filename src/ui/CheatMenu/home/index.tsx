@@ -198,6 +198,15 @@ const Home: React.FC<Props> = ({
             checked={data?.through}
             onChange={(checked) => setSomeGameSettings("through", checked)}
           />
+          <SettingSwitch
+            title="一击秒杀"
+            description="我方角色造成正伤害时直接击败敌人"
+            checked={data?.oneHitKillEnabled}
+            tooltip="部分自定义战斗插件可能不会响应此设置"
+            onChange={(checked) =>
+              setSomeGameSettings("oneHitKillEnabled", checked)
+            }
+          />
         </div>
       </section>
 
