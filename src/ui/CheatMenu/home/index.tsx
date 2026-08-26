@@ -52,7 +52,6 @@ const Home: React.FC<Props> = ({
   getGameData,
   handleAchieveVictory,
   handleAchieveDefeat,
-  handleEscapeBattle,
   modifyGold,
   setSomeGameSettings,
 }) => {
@@ -229,7 +228,7 @@ const Home: React.FC<Props> = ({
               战斗强制失败
             </Button>
           </Tooltip>
-          <Tooltip title="需处于战斗状态">
+          {/* <Tooltip title="需处于战斗状态">
             <Button
               className="home-action-card"
               size="small"
@@ -237,7 +236,7 @@ const Home: React.FC<Props> = ({
             >
               战斗强制逃跑
             </Button>
-          </Tooltip>
+          </Tooltip> */}
         </div>
       </section>
     </div>
