@@ -26,6 +26,12 @@ const shortcutActionCatalog: ShortcutActionMetadata[] = [
     category: "开关",
   },
   {
+    id: "toggleOneHitKill",
+    name: "切换一击秒杀",
+    description: "开启或关闭我方角色对敌人的一击秒杀",
+    category: "开关",
+  },
+  {
     id: "achieveVictory",
     name: "战斗直接胜利",
     description: "在战斗中立即执行胜利结算",

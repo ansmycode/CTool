@@ -12,6 +12,7 @@ export type GameShortcutActionId =
   | "toggleThrough"
   | "toggleEncounter"
   | "toggleFormation"
+  | "toggleOneHitKill"
   | "achieveVictory"
   | "achieveDefeat";
 
@@ -37,6 +38,7 @@ export interface GameData {
   playerSpeed: number;
   gameSpeed: number;
   through: boolean;
+  oneHitKillEnabled: boolean;
 }
 
 export interface GameEngineAdapter {

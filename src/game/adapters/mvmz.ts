@@ -20,6 +20,7 @@ interface MVMZGameData {
   playerSpeed: number;
   gameSpeed: number;
   through: boolean;
+  oneHitKillEnabled: boolean;
 }
 
 const capabilities = new Set<GameCapability>([
@@ -37,6 +38,7 @@ const shortcutActions = new Set<GameShortcutActionId>([
   "toggleThrough",
   "toggleEncounter",
   "toggleFormation",
+  "toggleOneHitKill",
   "achieveVictory",
   "achieveDefeat",
 ]);
@@ -89,6 +91,7 @@ export const mvmzAdapter: GameEngineAdapter = {
       playerSpeed: raw.playerSpeed,
       gameSpeed: raw.gameSpeed,
       through: raw.through,
+      oneHitKillEnabled: raw.oneHitKillEnabled,
     };
   },
 

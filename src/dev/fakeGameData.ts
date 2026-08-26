@@ -113,4 +113,5 @@ export const fakeGameData: GameData = {
   playerSpeed: 4,
   gameSpeed: 1,
   through: false,
+  oneHitKillEnabled: false,
 };

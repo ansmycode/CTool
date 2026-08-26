@@ -101,6 +101,10 @@ export function useGameData(engineType: EngineType) {
         "isFormationEnabled",
         !currentData.isFormationEnabled,
       ],
+      toggleOneHitKill: [
+        "oneHitKillEnabled",
+        !currentData.oneHitKillEnabled,
+      ],
     } as const;
     const [setting, value] = settingActions[actionId];
     return setSomeGameSettings(setting, value);
