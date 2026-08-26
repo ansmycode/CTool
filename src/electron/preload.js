@@ -57,5 +57,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("open-path-in-file-manager", targetPath),
   deleteGameHistory: (gamePath) =>
     ipcRenderer.invoke("delete-game-history", gamePath), //删除游戏历史
+  updateGlobalShortcuts: (bindings) =>
+    ipcRenderer.invoke("shortcuts:update", bindings),
   test: () => ipcRenderer.invoke("test"),
 });

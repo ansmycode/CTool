@@ -1,0 +1,87 @@
+.shortcut-page {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 20px 20px;
+  overflow: auto;
+  background: #f7f8fa;
+}
+
+.shortcut-hint,
+.shortcut-list {
+  width: 100%;
+  max-width: 1040px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.shortcut-hint {
+  margin-bottom: 10px;
+  padding: 9px 12px;
+  color: #5d6470;
+  font-size: 12px;
+  background: #eef5ff;
+  border: 1px solid #d7e7ff;
+  border-radius: 6px;
+}
+
+.shortcut-list {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.shortcut-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 150px 300px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+}
+
+.shortcut-row + .shortcut-row {
+  border-top: 1px solid #eceef1;
+}
+
+.shortcut-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shortcut-title-line,
+.shortcut-editor,
+.shortcut-engines {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shortcut-copy .ant-typography-secondary {
+  font-size: 12px;
+}
+
+.shortcut-editor {
+  position: relative;
+}
+
+.shortcut-editor .ant-input {
+  width: 170px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.shortcut-error {
+  position: absolute;
+  top: 34px;
+  left: 0;
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .shortcut-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

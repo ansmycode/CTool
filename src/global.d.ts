@@ -70,6 +70,9 @@ declare global {
         message?: string;
       }>;
       deleteGameHistory: (gamePath: string) => Promise<void>;
+      updateGlobalShortcuts: (
+        bindings: Array<{ actionId: string; accelerator: string }>,
+      ) => Promise<Record<string, boolean>>;
       onReceiveMessage: (
         channel: string,
         callback: (event: unknown, data: any) => void,

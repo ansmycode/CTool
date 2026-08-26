@@ -43,6 +43,25 @@ export default function FakeGamePreview() {
     achieveDefeat: doNothing,
     escapeBattle: doNothing,
     setSomeGameSettings: doNothing,
+    shortcutActions: [
+      {
+        id: "toggleThrough",
+        name: "切换穿墙模式",
+        description: "在开启与关闭地图碰撞之间切换",
+        category: "开关",
+        supportedEngines: ["MV", "MZ"],
+      },
+      {
+        id: "achieveVictory",
+        name: "战斗直接胜利",
+        description: "在战斗中立即执行胜利结算",
+        category: "触发",
+        supportedEngines: ["MV", "MZ"],
+      },
+    ],
+    shortcutBindings: { toggleThrough: "F6" },
+    shortcutRegistrationResults: { toggleThrough: true },
+    setShortcutBinding: () => {},
   });
 
   return (
