@@ -3,6 +3,7 @@ import { notification, Tabs } from "antd";
 import { CloseCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import { useGameData } from "@/game/useGameData";
+import { getShortcutRestrictionReason } from "@/game/shortcutPolicy";
 import { createCheatMenuTabs } from "./tabRegistry";
 import type { GameShortcutActionId } from "@/game/types";
 import type {
@@ -17,6 +18,7 @@ interface GameProps {
 }
 
 const SHORTCUT_STORAGE_KEY = "ctool:shortcut-bindings:v1";
+const SHORTCUT_ENABLED_STORAGE_KEY = "ctool:shortcuts-enabled:v1";
 
 function loadShortcutBindings(): ShortcutBindings {
   try {
@@ -27,6 +29,10 @@ function loadShortcutBindings(): ShortcutBindings {
   }
 }
 
+function loadShortcutsEnabled(): boolean {
+  return localStorage.getItem(SHORTCUT_ENABLED_STORAGE_KEY) !== "false";
+}
+
 const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   const [activeKey, setActiveKey] = useState("1");
   const [gameReady, setGameReady] = useState(false);
@@ -34,6 +40,8 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     useState<ShortcutBindings>(loadShortcutBindings);
   const [shortcutRegistrationResults, setShortcutRegistrationResults] =
     useState<ShortcutRegistrationResults>({});
+  const [shortcutsEnabled, setShortcutsEnabled] =
+    useState(loadShortcutsEnabled);
   const runningShortcutActions = useRef(new Set<GameShortcutActionId>());
   const [api, contextHolder] = notification.useNotification();
   const {
@@ -52,6 +60,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     escapeBattle,
     setSomeGameSettings,
     shortcutActions,
+    shortcutPolicy,
     executeShortcutAction,
   } = useGameData(gameInfo.engine);
 
@@ -107,31 +116,71 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
       SHORTCUT_STORAGE_KEY,
       JSON.stringify(shortcutBindings),
     );
+    localStorage.setItem(
+      SHORTCUT_ENABLED_STORAGE_KEY,
+      String(shortcutsEnabled),
+    );
 
     const supportedActionIds = new Set(shortcutActions.map(({ id }) => id));
-    const activeBindings = Object.entries(shortcutBindings)
+    const configuredBindings = Object.entries(shortcutBindings)
       .filter(
         (entry): entry is [GameShortcutActionId, string] =>
           supportedActionIds.has(entry[0] as GameShortcutActionId) &&
           typeof entry[1] === "string" &&
           entry[1].length > 0,
-      )
-      .map(([actionId, accelerator]) => ({ actionId, accelerator }));
+      );
+    const blockedResults: ShortcutRegistrationResults = {};
+    const activeBindings = shortcutsEnabled
+      ? configuredBindings.flatMap(([actionId, accelerator]) => {
+          const reason = getShortcutRestrictionReason(
+            shortcutPolicy,
+            accelerator,
+          );
+          if (reason) {
+            blockedResults[actionId] = false;
+            return [];
+          }
+          return [{ actionId, accelerator }];
+        })
+      : [];
 
     window.electronAPI
       .updateGlobalShortcuts(activeBindings)
-      .then((results) =>
+      .then((results) => {
+        const nextResults = shortcutsEnabled
+          ? { ...blockedResults, ...results }
+          : {};
         setShortcutRegistrationResults(
-          results as ShortcutRegistrationResults,
-        ),
-      )
-      .catch(() => setShortcutRegistrationResults({}));
-  }, [shortcutActions, shortcutBindings]);
+          nextResults as ShortcutRegistrationResults,
+        );
+
+        const failedActions = shortcutActions.filter(
+          ({ id }) => nextResults[id] === false,
+        );
+        if (failedActions.length > 0) {
+          api.warning({
+            message: "部分快捷键未能启用",
+            description: `${failedActions.map(({ name }) => name).join("、")}：可能是引擎保留键，或已被系统、游戏和其他软件占用。`,
+            duration: 5,
+          });
+        }
+      })
+      .catch(() => {
+        setShortcutRegistrationResults({});
+        if (shortcutsEnabled) {
+          api.error({
+            message: "快捷键注册失败",
+            description: "无法更新全局快捷键，请重新设置或重启工具。",
+          });
+        }
+      });
+  }, [api, shortcutActions, shortcutBindings, shortcutPolicy, shortcutsEnabled]);
 
   useEffect(() => {
     return window.electronAPI.onReceiveMessage(
       "shortcut-triggered",
       async (_event, actionId: GameShortcutActionId) => {
+        if (!shortcutsEnabled) return;
         const action = shortcutActions.find(({ id }) => id === actionId);
         if (!action || runningShortcutActions.current.has(actionId)) return;
 
@@ -158,7 +207,13 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
         }
       },
     );
-  }, [api, executeShortcutAction, gameReady, shortcutActions]);
+  }, [
+    api,
+    executeShortcutAction,
+    gameReady,
+    shortcutActions,
+    shortcutsEnabled,
+  ]);
 
   const setShortcutBinding = useCallback(
     (actionId: GameShortcutActionId, accelerator: string | null) => {
@@ -190,6 +245,9 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     shortcutActions,
     shortcutBindings,
     shortcutRegistrationResults,
+    shortcutsEnabled,
+    shortcutPolicy,
+    setShortcutsEnabled,
     setShortcutBinding,
   });
 

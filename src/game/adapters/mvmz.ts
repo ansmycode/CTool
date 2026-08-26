@@ -2,6 +2,7 @@ import type {
   GameCapability,
   GameData,
   GameEngineAdapter,
+  GameShortcutPolicy,
   GameShortcutActionId,
 } from "@/game/types";
 import { get, MVMZ_SERVICE_URL, post } from "@/lib/http";
@@ -43,10 +44,17 @@ const shortcutActions = new Set<GameShortcutActionId>([
   "achieveDefeat",
 ]);
 
+const shortcutPolicy: GameShortcutPolicy = {
+  blockedKeysWithoutCtrlOrAlt: {
+    F5: "MV/MZ 会把 F5 作为游戏重载键，可能导致游戏直接重新启动",
+  },
+};
+
 /** MV/MZ 引擎通信、原始字段转换与能力声明。 */
 export const mvmzAdapter: GameEngineAdapter = {
   capabilities,
   shortcutActions,
+  shortcutPolicy,
 
   async init(retries = 5, interval = 300, timeout = 500): Promise<boolean> {
     const ping = async (): Promise<boolean> => {

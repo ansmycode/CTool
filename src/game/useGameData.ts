@@ -115,6 +115,7 @@ export function useGameData(engineType: EngineType) {
     isGameLinks,
     capabilities: adapter.capabilities,
     shortcutActions,
+    shortcutPolicy: adapter.shortcutPolicy,
     getGameData,
     gameInit,
     modifyGold,
