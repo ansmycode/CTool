@@ -203,7 +203,7 @@
     "GET /performVictory": async (req, res) => {
       try {
         if ($gameParty.inBattle() && BattleManager._phase !== "battleEnd") {
-          $gameParty.performVictory();
+          BattleManager.processVictory();
           sendJson(res, 200, { success: true });
         } else {
           sendJson(res, 200, { success: false });
