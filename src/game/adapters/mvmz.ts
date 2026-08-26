@@ -2,6 +2,7 @@ import type {
   GameCapability,
   GameData,
   GameEngineAdapter,
+  GameShortcutActionId,
 } from "@/game/types";
 import { get, MVMZ_SERVICE_URL, post } from "@/lib/http";
 
@@ -32,9 +33,18 @@ const capabilities = new Set<GameCapability>([
   "translation",
 ]);
 
+const shortcutActions = new Set<GameShortcutActionId>([
+  "toggleThrough",
+  "toggleEncounter",
+  "toggleFormation",
+  "achieveVictory",
+  "achieveDefeat",
+]);
+
 /** MV/MZ 引擎通信、原始字段转换与能力声明。 */
 export const mvmzAdapter: GameEngineAdapter = {
   capabilities,
+  shortcutActions,
 
   async init(retries = 5, interval = 300, timeout = 500): Promise<boolean> {
     const ping = async (): Promise<boolean> => {

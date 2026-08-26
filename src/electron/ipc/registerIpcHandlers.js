@@ -31,7 +31,11 @@ function safeAIError(error, fallback) {
   return new Error(error instanceof Error ? error.message : fallback);
 }
 
-export function registerIpcHandlers({ getMainWindow, gameInjectionService }) {
+export function registerIpcHandlers({
+  getMainWindow,
+  gameInjectionService,
+  globalShortcutService,
+}) {
   ipcMain.handle("choose-game", async () => {
     const result = await dialog.showOpenDialog(getMainWindow(), {
       properties: ["openFile"],
@@ -178,5 +182,13 @@ export function registerIpcHandlers({ getMainWindow, gameInjectionService }) {
 
   ipcMain.handle("delete-game-history", async (_event, gamePath) => {
     return deleteHistory(gamePath);
+  });
+
+  ipcMain.handle("shortcuts:update", async (_event, bindings) => {
+    if (!Array.isArray(bindings)) {
+      throw new Error("快捷键配置格式无效");
+    }
+
+    return globalShortcutService.update(bindings.slice(0, 50));
   });
 }

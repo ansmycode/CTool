@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import { getEngineAdapter } from "@/game/registry";
-import type { EngineType, GameData, GameEngineAdapter } from "@/game/types";
+import { getShortcutActions } from "@/game/shortcutActions";
+import type {
+  EngineType,
+  GameData,
+  GameEngineAdapter,
+  GameShortcutActionId,
+} from "@/game/types";
 
 export function useGameData(engineType: EngineType) {
   const [gameData, setGameData] = useState<GameData | null>(null);
@@ -67,10 +73,44 @@ export function useGameData(engineType: EngineType) {
       currentAdapter.setSomeGameSettings(type, value),
     );
 
+  const shortcutActions = useMemo(
+    () => getShortcutActions(adapter.shortcutActions),
+    [adapter],
+  );
+
+  const executeShortcutAction = async (actionId: GameShortcutActionId) => {
+    if (!adapter.shortcutActions.has(actionId)) {
+      throw new Error("当前游戏引擎不支持此快捷功能");
+    }
+
+    if (actionId === "achieveVictory") {
+      return achieveVictory();
+    }
+    if (actionId === "achieveDefeat") {
+      return achieveDefeat();
+    }
+
+    const currentData = gameData ?? (await adapter.getData());
+    const settingActions = {
+      toggleThrough: ["through", !currentData.through],
+      toggleEncounter: [
+        "isEncounterEnabled",
+        !currentData.isEncounterEnabled,
+      ],
+      toggleFormation: [
+        "isFormationEnabled",
+        !currentData.isFormationEnabled,
+      ],
+    } as const;
+    const [setting, value] = settingActions[actionId];
+    return setSomeGameSettings(setting, value);
+  };
+
   return {
     gameData,
     isGameLinks,
     capabilities: adapter.capabilities,
+    shortcutActions,
     getGameData,
     gameInit,
     modifyGold,
@@ -84,5 +124,6 @@ export function useGameData(engineType: EngineType) {
     achieveDefeat,
     escapeBattle,
     setSomeGameSettings,
+    executeShortcutAction,
   };
 }

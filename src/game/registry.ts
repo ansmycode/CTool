@@ -1,5 +1,9 @@
 import mvmzAdapter from "@/game/adapters/mvmz";
-import type { EngineType, GameEngineAdapter } from "@/game/types";
+import type {
+  EngineType,
+  GameEngineAdapter,
+  GameShortcutActionId,
+} from "@/game/types";
 
 const engineAdapters: Partial<
   Record<NonNullable<EngineType>, GameEngineAdapter>
@@ -16,4 +20,15 @@ export function getEngineAdapter(engineType: EngineType): GameEngineAdapter {
   }
 
   return adapter;
+}
+
+export function getShortcutActionSupportedEngines(
+  actionId: GameShortcutActionId,
+): NonNullable<EngineType>[] {
+  return (Object.entries(engineAdapters) as [
+    NonNullable<EngineType>,
+    GameEngineAdapter,
+  ][])
+    .filter(([, adapter]) => adapter.shortcutActions.has(actionId))
+    .map(([engine]) => engine);
 }

@@ -8,6 +8,21 @@ export type GameCapability =
   | "actors"
   | "translation";
 
+export type GameShortcutActionId =
+  | "toggleThrough"
+  | "toggleEncounter"
+  | "toggleFormation"
+  | "achieveVictory"
+  | "achieveDefeat";
+
+export interface GameShortcutAction {
+  id: GameShortcutActionId;
+  name: string;
+  description: string;
+  category: "开关" | "触发";
+  supportedEngines: NonNullable<EngineType>[];
+}
+
 export interface GameData {
   gold: number;
   actors: any[];
@@ -26,6 +41,7 @@ export interface GameData {
 
 export interface GameEngineAdapter {
   readonly capabilities: ReadonlySet<GameCapability>;
+  readonly shortcutActions: ReadonlySet<GameShortcutActionId>;
   init(): Promise<boolean>;
   getData(): Promise<GameData>;
   setGameGold(amount: number): Promise<void>;

@@ -2,7 +2,16 @@ import { lazy, Suspense } from "react";
 import { Spin } from "antd";
 import type { ReactNode } from "react";
 import type { TabsProps } from "antd";
-import type { GameCapability, GameData } from "@/game/types";
+import type {
+  GameCapability,
+  GameData,
+  GameShortcutAction,
+  GameShortcutActionId,
+} from "@/game/types";
+import type {
+  ShortcutBindings,
+  ShortcutRegistrationResults,
+} from "./shortcuts/types";
 
 const Home = lazy(() => import("./home/index"));
 const ItemsTable = lazy(() => import("./itemsTable/index"));
@@ -12,6 +21,7 @@ const VariablesTable = lazy(() => import("./variablesTable/index"));
 const SwitchesTable = lazy(() => import("./switchesTable/index"));
 const ActorTable = lazy(() => import("./actorTable/index"));
 const TranslateTool = lazy(() => import("./translateTool/index"));
+const ShortcutSettings = lazy(() => import("./shortcuts/index"));
 
 interface CheatMenuContext {
   gameData: GameData | null;
@@ -28,12 +38,19 @@ interface CheatMenuContext {
   achieveDefeat: () => Promise<void>;
   escapeBattle: () => Promise<void>;
   setSomeGameSettings: (type: string, value: any) => Promise<void>;
+  shortcutActions: GameShortcutAction[];
+  shortcutBindings: ShortcutBindings;
+  shortcutRegistrationResults: ShortcutRegistrationResults;
+  setShortcutBinding: (
+    actionId: GameShortcutActionId,
+    accelerator: string | null,
+  ) => void;
 }
 
 interface CheatMenuTabDefinition {
   key: string;
   label: string;
-  capability: GameCapability;
+  capability?: GameCapability;
   render: (context: CheatMenuContext) => ReactNode;
 }
 
@@ -145,6 +162,18 @@ const tabDefinitions: CheatMenuTabDefinition[] = [
       />
     ),
   },
+  {
+    key: "9",
+    label: "快捷键",
+    render: (context) => (
+      <ShortcutSettings
+        actions={context.shortcutActions}
+        bindings={context.shortcutBindings}
+        registrationResults={context.shortcutRegistrationResults}
+        onBindingChange={context.setShortcutBinding}
+      />
+    ),
+  },
 ];
 
 export function createCheatMenuTabs(
@@ -152,7 +181,7 @@ export function createCheatMenuTabs(
   context: CheatMenuContext,
 ): TabsProps["items"] {
   return tabDefinitions
-    .filter(({ capability }) => capabilities.has(capability))
+    .filter(({ capability }) => !capability || capabilities.has(capability))
     .map(({ key, label, render }) => ({
       key,
       label,
