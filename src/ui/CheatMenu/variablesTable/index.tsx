@@ -1,12 +1,12 @@
 import React from "react";
 import { Input, Table } from "antd";
+import { useGameFeature } from "@/game/GameFeatureContext";
 import { TableSearchBar } from "@/ui/CheatMenu/TableSearchBar";
 import { useTableDraftValues } from "@/ui/CheatMenu/useTableDraftValues";
 import { useTableSearch } from "@/ui/CheatMenu/useTableSearch";
 import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
 
 interface Props {
-  variables: Item[] | undefined;
   changeVariables: (id: number, value: string | number) => Promise<void>;
 }
 
@@ -22,7 +22,8 @@ const getSearchValues = (item: Item) => [
   item.variablesValue,
 ];
 
-const VariablesTable: React.FC<Props> = ({ variables, changeVariables }) => {
+const VariablesTable: React.FC<Props> = ({ changeVariables }) => {
+  const { data: variables } = useGameFeature("variables");
   const { containerRef, scrollY } = useTableScrollY();
   const { getDraftValue, setDraftValue } =
     useTableDraftValues<string | number>(variables);

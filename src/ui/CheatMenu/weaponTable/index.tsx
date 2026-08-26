@@ -1,12 +1,12 @@
 import React from "react";
 import { InputNumber, Table } from "antd";
+import { useGameFeature } from "@/game/GameFeatureContext";
 import { TableSearchBar } from "@/ui/CheatMenu/TableSearchBar";
 import { useTableDraftValues } from "@/ui/CheatMenu/useTableDraftValues";
 import { useTableSearch } from "@/ui/CheatMenu/useTableSearch";
 import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
 
 interface Props {
-  WeaponsData: Item[] | undefined;
   handleGainItem: (id: number, count: number, gainType: string) => void;
 }
 
@@ -18,7 +18,8 @@ interface Item {
 
 const getSearchValues = (item: Item) => [item.id, item.name];
 
-const WeaponTable: React.FC<Props> = ({ WeaponsData, handleGainItem }) => {
+const WeaponTable: React.FC<Props> = ({ handleGainItem }) => {
+  const { data: WeaponsData } = useGameFeature("weapons");
   const { containerRef, scrollY } = useTableScrollY();
   const { getDraftValue, setDraftValue } =
     useTableDraftValues<number | null>(WeaponsData);

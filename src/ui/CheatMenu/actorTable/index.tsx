@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Table, InputNumber, Checkbox, Input, Select, Card, Form } from "antd";
+import { useGameFeature } from "@/game/GameFeatureContext";
+import type { ActorData } from "@/game/features";
 import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
 
 interface Props {
-  actorData: any[];
-  classData: any[];
   setActorInTeam: (ids: Array<number>) => Promise<void>;
   setActorData: (actor: any) => Promise<void>;
 }
 
-interface Item {
-  id: number;
-  name: string;
-  playerHasCount: number;
-}
+const emptyList: never[] = [];
 
 const actorList = [
   { key: "id", value: "角色ID" },
@@ -33,11 +29,12 @@ const actorList = [
 ];
 
 const ActorTable: React.FC<Props> = ({
-  actorData,
   setActorInTeam,
-  classData,
   setActorData,
 }) => {
+  const { data } = useGameFeature("actors");
+  const actorData = data?.actors ?? emptyList;
+  const classData = data?.classes ?? emptyList;
   const { containerRef, scrollY } = useTableScrollY();
   const [listData, setListData] = useState(actorData);
   const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
@@ -64,7 +61,7 @@ const ActorTable: React.FC<Props> = ({
 
     const actor = listData.find((a) => a.id === id);
 
-    if (actor && actor[item.key] === value) return;
+    if (actor && actor[item.key as keyof ActorData] === value) return;
 
     setActorData({
       id,
@@ -130,7 +127,7 @@ const ActorTable: React.FC<Props> = ({
       title: "在队伍中",
       dataIndex: "inTeam",
       width: 80,
-      render: (isIn: boolean, record: Item) => (
+      render: (isIn: boolean, record: ActorData) => (
         <Checkbox
           checked={isIn}
           onChange={(e: any) => {

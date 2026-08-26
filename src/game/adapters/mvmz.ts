@@ -1,39 +1,44 @@
 import type {
-  GameCapability,
-  GameData,
   GameEngineAdapter,
   GameShortcutPolicy,
   GameShortcutActionId,
 } from "@/game/types";
+import type {
+  GameFeatureDataMap,
+  GameFeatureReaders,
+} from "@/game/features";
 import { get, MVMZ_SERVICE_URL, post } from "@/lib/http";
 
-interface MVMZGameData {
-  gold: number;
-  allMembers: any[];
-  allArmors: any[];
-  allItem: any[];
-  allWeapons: any[];
-  isEncounterEnabled: boolean;
-  isFormationEnabled: boolean;
-  variables: any[];
-  switches: any[];
-  classList: any[];
-  playerSpeed: number;
-  gameSpeed: number;
-  through: boolean;
-  oneHitKillEnabled: boolean;
+async function getFeatureData<K extends keyof GameFeatureDataMap>(
+  endpoint: string,
+): Promise<GameFeatureDataMap[K]> {
+  const response = await get<GameFeatureDataMap[K]>(endpoint, {});
+  return response.data as GameFeatureDataMap[K];
 }
 
-const capabilities = new Set<GameCapability>([
-  "gold",
-  "items",
-  "armors",
-  "weapons",
-  "variables",
-  "switches",
-  "actors",
-  "translation",
-]);
+const features: GameFeatureReaders = {
+  overview: {
+    getData: () => getFeatureData<"overview">("/getOverviewData"),
+  },
+  items: {
+    getData: () => getFeatureData<"items">("/getItemsData"),
+  },
+  armors: {
+    getData: () => getFeatureData<"armors">("/getArmorsData"),
+  },
+  weapons: {
+    getData: () => getFeatureData<"weapons">("/getWeaponsData"),
+  },
+  variables: {
+    getData: () => getFeatureData<"variables">("/getVariablesData"),
+  },
+  switches: {
+    getData: () => getFeatureData<"switches">("/getSwitchesData"),
+  },
+  actors: {
+    getData: () => getFeatureData<"actors">("/getActorsData"),
+  },
+};
 
 const shortcutActions = new Set<GameShortcutActionId>([
   "toggleThrough",
@@ -52,7 +57,7 @@ const shortcutPolicy: GameShortcutPolicy = {
 
 /** MV/MZ 引擎通信、原始字段转换与能力声明。 */
 export const mvmzAdapter: GameEngineAdapter = {
-  capabilities,
+  features,
   shortcutActions,
   shortcutPolicy,
 
@@ -81,28 +86,6 @@ export const mvmzAdapter: GameEngineAdapter = {
     return false;
   },
 
-  async getData(): Promise<GameData> {
-    const response = await get<MVMZGameData>("/getGameData", {});
-    const raw = response.data as MVMZGameData;
-
-    return {
-      gold: raw.gold,
-      actors: raw.allMembers,
-      armors: raw.allArmors,
-      items: raw.allItem,
-      weapons: raw.allWeapons,
-      isEncounterEnabled: raw.isEncounterEnabled,
-      isFormationEnabled: raw.isFormationEnabled,
-      variables: raw.variables,
-      switches: raw.switches,
-      classes: raw.classList,
-      playerSpeed: raw.playerSpeed,
-      gameSpeed: raw.gameSpeed,
-      through: raw.through,
-      oneHitKillEnabled: raw.oneHitKillEnabled,
-    };
-  },
-
   async setGameGold(amount: number): Promise<void> {
     await post("/setGold", { gold: amount });
   },
@@ -123,11 +106,11 @@ export const mvmzAdapter: GameEngineAdapter = {
     await post("/setActorInTeam", { ids });
   },
 
-  async setActorData(actor: any): Promise<void> {
+  async setActorData(actor: unknown): Promise<void> {
     await post("/setActorData", { actor });
   },
 
-  async sendTranslationData(translated: any): Promise<void> {
+  async sendTranslationData(translated: unknown): Promise<void> {
     await post("/sendTranslationData", { translated });
   },
 
@@ -143,7 +126,7 @@ export const mvmzAdapter: GameEngineAdapter = {
     await get("/performEscape", {});
   },
 
-  async setSomeGameSettings(type: string, value: any): Promise<void> {
+  async setSomeGameSettings(type: string, value: unknown): Promise<void> {
     await post("/setSomeGameSettings", { type, value });
   },
 };
