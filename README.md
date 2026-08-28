@@ -40,7 +40,7 @@ CTool 可以识别并启动本地 RPG Maker MV / MZ 游戏，通过临时注入�
 
 ## 从源码运行
 
-需要 Node.js 22 和 npm 10。仓库目前未提供正式 Release。
+需要 Node.js 22 和 npm 10。
 
 ```powershell
 git clone https://github.com/ansmycode/CTool.git
