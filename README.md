@@ -87,7 +87,15 @@ AI 翻译使用用户提供的 API Key。Key 只在本次运行期间使用，�
 
 开发者和 AI 编码工具请先阅读 [AGENTS.md](./AGENTS.md)，其中包含当前架构、模块边界、任务定位和修改约束。专项设计与规划位于 [`docs/`](./docs/)。
 
-## 反馈与贡献
+## 联系方式/反馈
+
+欢迎加入 CTool 项目交流群，交流使用心得或反馈问题。
+
+**QQ 群：1015360591**
+
+<p align="center">
+  <img src="./images/qrcode_1788095786864.jpg" width="360" alt="CTool 项目交流群二维码，QQ群号 1015360591">
+</p>
 
 欢迎通过 [GitHub Issues](https://github.com/ansmycode/CTool/issues) 报告问题或提出建议，也欢迎提交 Pull Request。报告问题时请附上 CTool 版本、Windows 版本、游戏引擎与版本、复现步骤和错误截图；请勿上传游戏本体、存档或其他受版权保护的内容。
 
