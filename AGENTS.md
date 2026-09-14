@@ -6,7 +6,9 @@
 
 CTool 是一个仅面向 Windows 的 Electron 桌面工具，用于识别并启动 RPG Maker MV / MZ 游戏。它会以 RPG Maker 插件的方式临时注入本地脚本，让 React 界面通过 localhost 读取和修改运行中的游戏数据；同时提供文本提取、实时翻译、数据内嵌翻译、备份还原和 AI 批量翻译。
 
-当前只实际支持 RPG Maker MV / MZ。`wolf` 只存在于部分类型或规划中，不代表已实现。
+完整游戏功能目前支持 RPG Maker MV / MZ；Wolf 已实现 x86 识别、原生启动、DLL 双向通信、金币修改及物品资料/基本系统库存只读展示，启动不受哈希白名单限制。MY 金币双向修改已由用户验收；三项道具库存已通过只读探针对照用户报告。其他游戏布局仍待验证；尚无库存/角色修改、文本采集或翻译 Hook。原始数据库浏览仅保留 DEV 入口。
+
+Wolf 完整设计见 [适配方案](docs/WOLF_IMPLEMENTATION_PLAN.md)，实际落地范围、构建方式和样本测试记录见 [P0/P1 状态](docs/WOLF_P1_STATUS.md)。先区分已实现与后续计划。
 
 技术栈：Electron 37、React 19、TypeScript 5、Vite 7、Ant Design 5。Electron 主进程与测试代码主要使用原生 ESM JavaScript，渲染层主要使用 TypeScript/TSX。
 
@@ -20,19 +22,25 @@ CTool 是一个仅面向 Windows 的 Electron 桌面工具，用于识别并启�
 React UI
   -> window.electronAPI（preload 暴露）
   -> Electron IPC handlers
-  -> services / engine 文件操作
-  -> 注入插件并启动 Game.exe
+  -> gameSessionService / engines registry
+  -> MV/MZ 插件驱动，或 Wolf x86 injector + DLL
+  -> 启动 Game.exe 并发布会话状态
 ```
 
 - Electron 入口：`src/electron/main.js`
 - 渲染层桥接：`src/electron/preload.js`
 - IPC 注册：`src/electron/ipc/registerIpcHandlers.js`
 - 游戏识别：`src/electron/services/gameDetectionService.js` -> `src/utils/gameUtil.js`
-- 注入和进程生命周期：`src/electron/services/gameInjectionService.js`
+- 游戏会话：`src/electron/services/gameSessionService.js`（快照 + revision 事件）
+- 主进程引擎驱动：`src/electron/engines/registry.js`、`mvmzDriver.js`、`wolfDriver.js`
+- Wolf 检测和指纹：`src/engine/wolf/detect.js`
+- Wolf 原生程序：`native/injector/main.cpp`、`native/wolf/main.cpp`
 - MV/MZ 插件注入实现：`src/engine/mvmz/injectScript.js`、`src/engine/mvmz/pluginInjection.js`
 - 注入脚本源文件：`inject/cheat.js`、`inject/translator.js`
 
-注入时，CTool 将两个脚本复制到游戏的 `js/plugins`，并把插件项加入 `js/plugins.js`。游戏进程退出后会清理本次添加的插件项和文件。异常退出可能来不及清理。
+MV/MZ 注入时，CTool 将两个脚本复制到游戏的 `js/plugins`，并把插件项加入 `js/plugins.js`。游戏进程退出后会清理本次添加的插件项和文件。异常退出可能来不及清理。
+
+Wolf 使用 inject-x86.exe 创建并在 PE 入口点暂时暂停游戏，注入 DLL 后恢复运行。双向 Named Pipe 服务端在 injector 内，设置当前用户 ACL、拒绝远程连接并核对客户端 PID；请求经 helper stdin，响应经 stdout。GameEngineAdapter.database 提供会话绑定的目录/分页访问；native/wolf/database_reader.h 不解释业务字段，src/electron/wolf/databaseSemantics.js 和 goldMonitor.js 识别、轮询金币，再经 telemetry.gold 显示。DatabaseBrowser 允许只读查看及本会话金币绑定，没有开放完整修改器能力。布局、旧错误和验收范围见 [数据库与金币 MVP](docs/WOLF_GOLD_MVP.md)。
 
 ### 2. 运行时游戏数据链路
 
@@ -54,9 +62,17 @@ CheatMenu 页面
 - 功能页注册与能力过滤：`src/ui/CheatMenu/tabRegistry.tsx`
 - HTTP 封装：`src/lib/http.ts`
 
-`localhost:5000` 是注入到游戏中的数据服务。`localhost:5001` 是 Electron 自己监听的回调服务，游戏加载完成后向 `/gameReady` 发消息。不要交换这两个端口的职责。
+`localhost:5000` 是注入到游戏中的数据服务。`localhost:5001` 是 Electron 自己监听的回调服务，游戏加载完成后向 `/gameReady` 发消息，由主进程转为会话 ready 状态。不要交换这两个端口的职责。
 
 ## 主要目录
+
+2026-09-14 库存展示规则更新：已注册定义为主表，成功读取且映射明确的背包按 ID 覆盖数量；缺少持有记录显示 0，读取失败/未确认映射保持不可用。共用 InventoryTable 渲染 MV/MZ 和 Wolf；MV/MZ 经 useGameFeature，Wolf 保留动态 collections 编排。此条取代下文历史“缺失记录不能补 0”的表述，见 [复用评估](docs/WOLF_UI_REUSE.md)。
+
+Wolf 物品分类由映射结果生成独立标签页，每分类完整虚拟滚动表，无 UI 分页。底层仍按 10 行分批读取，仅活动分类刷新；库存边界查询运行时行数，不以初始缓存行数跳过后续数据。缺失记录、读取失败与未确认映射分别说明，不能擅自补 0。
+
+Wolf 普通 UI 展示金币控制台和物品资料；原始数据库、手动金币候选和详细诊断只在 DEV 可见。Wolf adapter 独有 collections 接口通过 databaseMapping.js 和 wolfCollections.ts 解释可选基本系统语义，不向 MV/MZ 添加虚假能力。映射规则、MY 三项库存只读核验及多游戏扩展边界见 [Wolf 映射](docs/WOLF_MAPPING.md)。金币双向修改已由用户验收；库存目前只读，未知记录不补 0。
+
+Wolf 已进入统一 CheatMenu，RuntimeConsole 展示会话金币与诊断，数据库单列页签；GoldEditor 与 MV/MZ 主页共用显式提交。setGameGold 经会话专用 IPC 调用，需 goldWriteProtocol=1；只允许当前绑定的可变数据库数字字段并核对旧值、回读确认。数据库浏览 IPC 不允许写入。原生后台单值写入不是主线程事务，不在读档/切场景期间使用；不要把未知背包布局直接套用 MV/MZ。
 
 ```text
 src/ui/                 React 页面；Main 负责选游戏，CheatMenu 负责运行时功能
@@ -64,6 +80,9 @@ src/game/               与引擎无关的统一游戏数据层和 MV/MZ Adapter
 src/electron/           Electron 主进程、IPC、窗口与桌面端业务服务
 src/electron/ai/        AI 翻译请求、分批、重试、并发与断点工作文件
 src/engine/mvmz/        MV/MZ 文件处理、插件注入和文本提取
+src/engine/wolf/        Wolf 文件检测、PE 与诊断指纹（不限制启动）
+native/                x86 injector、最小 DLL、CMake 构建和测试夹具
+scripts/               原生构建与端到端烟测
 src/lib/                渲染层通用基础设施，目前主要是 HTTP
 src/utils/              游戏识别、历史记录等旧式工具代码
 inject/                 会复制进目标游戏的运行时插件脚本
@@ -83,7 +102,7 @@ tool_data/              打包时随应用分发的工具数据
 | 新增游戏数据能力或接口 | 上述文件，再读 `src/game/types.ts`、`src/game/adapters/mvmz.ts`、`inject/cheat.js` |
 | 支持新游戏引擎 | `src/game/types.ts`、`src/game/registry.ts`、新 Adapter、检测/注入服务；不要把 MV/MZ 分支散落进 UI |
 | 修改游戏选择、文件操作或系统能力 | `src/electron/preload.js`、`src/global.d.ts`、`src/electron/ipc/registerIpcHandlers.js`、对应 service |
-| 修改注入与退出清理 | `src/electron/services/gameInjectionService.js`、`src/engine/mvmz/*`、`tests/injection/*` |
+| 修改注入与退出清理 | `src/electron/services/gameSessionService.js`、`src/electron/engines/*`、`src/engine/mvmz/*`、`tests/injection/*`、`tests/wolf/*` |
 | 修改文本提取或内嵌翻译 | `src/electron/services/translationService.js`、`translationEngineAdapters.js`、`gameDataBackupService.js`、`src/engine/mvmz/extract.js` |
 | 修改 AI 批量翻译 | `src/ui/AITranslation/*`、`src/electron/ai/*`、`src/types/AITranslation.ts`、`tests/ai/*` |
 | 修改全局快捷键 | `src/game/shortcut*`、`src/electron/services/globalShortcutService.js`、`src/ui/CheatMenu/shortcuts/*` |
@@ -100,6 +119,8 @@ tool_data/              打包时随应用分发的工具数据
 - API Key 只在当前运行期间使用，不得写入配置、日志或翻译工作文件，也不得在错误信息中回显。
 - `inject/` 和 `tool_data/` 是打包资源。修改文件名或位置时同步检查 `package.json` 的 `build.extraResources`。
 - `docs/*_PLAN.md` 记录规划和历史决策。判断当前行为时，以代码和测试为准。
+- Wolf 启动不受 EXE 哈希白名单限制；禁止因版本相似就启用未验证 Hook。进程/DLL 位数必须匹配。
+- 游戏 ready/closed 使用会话快照和 revision，不能恢复旧的无会话布尔事件。DLL 失联不能冒充游戏退出。
 - 不直接编辑构建产物；改 `src/` 或 `inject/` 中的源文件后重新构建。
 
 ## 常用命令
@@ -111,8 +132,13 @@ npm run lint
 npm run test:ai
 npm run test:backup
 npm run test:injection
+npm run build:native
+npm run test:wolf
+npm run test:native
 npm run dist
 ```
+
+`build:native` 需要 Windows Visual Studio C++ x86 工具和 CMake。`test:native` 会启动并正常关闭自建测试窗口；指定实际游戏的方法见 P0/P1 状态文档。原生输出 `native/build/` 不提交。
 
 验证应与改动范围匹配：UI 或类型变更至少运行 `npm run build`；注入、备份或 AI 逻辑还应运行对应测试。`npm run lint` 当前扫描整个仓库，遇到既有问题时要区分本次引入与历史问题。
 
