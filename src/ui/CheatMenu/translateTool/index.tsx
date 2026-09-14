@@ -167,17 +167,12 @@ const TranslateTool: React.FC<Props> = ({ gameInfo, sendTranslationData }) => {
     //   });
     //   return;
     // }
-    const res: any = await sendTranslationData(result);
-    if (res.success) {
-      api.info({
-        message: "消息提示",
-        description: "已结束加载,请自行确认是否生效",
-      });
-    } else {
-      api.error({
-        message: "错误",
-        description: `报错信息:${res.error}`,
-      });
+    if (!result) return;
+    try {
+      await sendTranslationData(result);
+      api.success({ message: "翻译文件已加载" });
+    } catch (error) {
+      api.error({ message: "加载失败", description: error instanceof Error ? error.message : "未知错误" });
     }
   };
 
