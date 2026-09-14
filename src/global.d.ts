@@ -1,4 +1,5 @@
 export {};
+import type { DetectedGame, GameSessionSnapshot } from '@/types/GameSession';
 
 import type {
   AITranslationFileSelection,
@@ -24,6 +25,14 @@ declare global {
 
   interface Window {
     electronAPI: {
+      chooseGame: () => Promise<string | null>;
+      detectEngine: (exePath: string) => Promise<DetectedGame>;
+      launchGame: (exePath: string) => Promise<GameSessionSnapshot>;
+      getGameSession: () => Promise<GameSessionSnapshot | null>;
+      readGameDatabase:(sessionId:string,request:import("@/game/database").DatabaseRequest)=>Promise<import("@/game/database").DatabaseResult>;
+      selectGameGoldSource:(sessionId:string,target:import("@/game/database").DatabaseCellRef|null)=>Promise<void>;
+      setGameGold:(sessionId:string,value:number,expectation:import("@/game/database").GoldWriteExpectation)=>Promise<void>;
+      onGameSessionChanged: (callback: (snapshot: GameSessionSnapshot) => void) => () => void;
       applyFilters: (args: { gameInfo: any }) => Promise<void>;
       saveTranslateFile: (args: {
         textArr: string[];

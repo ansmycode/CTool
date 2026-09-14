@@ -2,8 +2,16 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   detectEngine: (exePath) => ipcRenderer.invoke("detect-engine", exePath), //判断游戏引擎
-  injectScript: (gameInfo) => ipcRenderer.invoke("inject-script", gameInfo), //mv/mz注入脚本操作
-  injectOther: (gamePath) => ipcRenderer.invoke("inject-other", gamePath), //其他引擎注入脚本操作
+  launchGame: (exePath) => ipcRenderer.invoke("game:launch", exePath),
+  getGameSession: () => ipcRenderer.invoke("game:snapshot"),
+  readGameDatabase:(sessionId,request)=>ipcRenderer.invoke("game:database-read",sessionId,request),
+  selectGameGoldSource:(sessionId,target)=>ipcRenderer.invoke("game:gold-source",sessionId,target),
+  setGameGold:(sessionId,value,expectation)=>ipcRenderer.invoke("game:gold-write",sessionId,value,expectation),
+  onGameSessionChanged: (callback) => {
+    const listener = (_event, snapshot) => callback(snapshot);
+    ipcRenderer.on("game-session-changed", listener);
+    return () => ipcRenderer.removeListener("game-session-changed", listener);
+  },
   getRpgmvmzData: () => ipcRenderer.invoke("get-rpgmvmz-data"), //其他引擎注入脚本操作
   chooseGame: () => ipcRenderer.invoke("choose-game"), //选择游戏
   sendMessage: (channel, message) => ipcRenderer.send(channel, message), // 渲染 ===> 主

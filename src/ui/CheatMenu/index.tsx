@@ -13,8 +13,15 @@ import type {
   ShortcutRegistrationResults,
 } from "./shortcuts/types";
 import "./index.css";
+import RuntimeConsole from "./RuntimeConsole";
+import CollectionBrowser from "./CollectionBrowser";
+import type {GameCollection} from "@/game/database";
+const DatabaseBrowser = import.meta.env.DEV ? React.lazy(()=>import("@/ui/Main/DatabaseBrowser")) : null;
+
+import type { GameSessionSnapshot } from "@/types/GameSession";
 
 interface GameProps {
+  session: GameSessionSnapshot;
   isGameStarting: boolean;
   gameInfo: any;
 }
@@ -35,9 +42,11 @@ function loadShortcutsEnabled(): boolean {
   return localStorage.getItem(SHORTCUT_ENABLED_STORAGE_KEY) !== "false";
 }
 
-const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
-  const [activeKey, setActiveKey] = useState("1");
-  const [gameReady, setGameReady] = useState(false);
+const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo, session }) => {
+  const [activeKey, setActiveKey] = useState(session.databaseReadOnly?"runtime":"1");
+  const [collectionGroups,setCollectionGroups]=useState<GameCollection[]>([]);
+  const [collectionError,setCollectionError]=useState("");
+  const gameReady = session.state === "ready" || !!session.databaseReadOnly;
   const [shortcutBindings, setShortcutBindings] =
     useState<ShortcutBindings>(loadShortcutBindings);
   const [shortcutRegistrationResults, setShortcutRegistrationResults] =
@@ -47,6 +56,9 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   const runningShortcutActions = useRef(new Set<GameShortcutActionId>());
   const [api, contextHolder] = notification.useNotification();
   const {
+    database,
+    collections,
+    setRuntimeGold,
     features,
     capabilities,
     refreshFeature,
@@ -64,7 +76,14 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
     shortcutActions,
     shortcutPolicy,
     executeShortcutAction,
-  } = useGameFeatures(gameInfo.engine);
+  } = useGameFeatures(gameInfo.engine, session.sessionId, session.capabilities);
+
+  useEffect(()=>{
+    let active=true;setCollectionGroups([]);setCollectionError("");
+    if(collections)void collections.list().then(groups=>{if(active)setCollectionGroups(groups);})
+      .catch(e=>{if(active)setCollectionError(String(e.message||e));});
+    return()=>{active=false;};
+  },[collections]);
 
   console.log("游戏启动" + isGameStarting);
   console.log("游戏初始化" + gameReady);
@@ -99,7 +118,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
 
   const refreshActiveFeature = useCallback(() => {
     const feature = getTabFeatureKey(activeKey);
-    if (feature) void getFeatureDataWithNotify(feature);
+    if (feature) void getFeatureDataWithNotify(feature).catch(()=>{});
   }, [activeKey, getFeatureDataWithNotify]);
 
   useEffect(() => {
@@ -114,15 +133,6 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   useEffect(() => {
     refreshActiveFeature();
   }, [gameReady, activeKey, refreshActiveFeature]);
-
-  useEffect(() => {
-    return window.electronAPI.onReceiveMessage(
-      "game-ready",
-      (_: unknown, result: any) => {
-        setGameReady(result);
-      },
-    );
-  }, []);
 
   useEffect(() => {
     localStorage.setItem(
@@ -241,6 +251,10 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   );
 
   const menuList = createCheatMenuTabs(capabilities, {
+    runtime:database&&session.databaseReadOnly?<RuntimeConsole session={session} access={database} onWrite={setRuntimeGold} />:undefined,
+    collections:collections?collectionGroups.map(group=>({key:`collection:${group.key}`,label:group.label,
+      children:<CollectionBrowser access={collections} group={group} active={activeKey===`collection:${group.key}`} />})):undefined,
+    database:database&&DatabaseBrowser?<React.Suspense fallback={null}><div className="runtime-page"><DatabaseBrowser access={database} /></div></React.Suspense>:undefined,
     gameInfo,
     modifyGold,
     modifyVariable,
@@ -265,6 +279,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo }) => {
   return (
     <div className="cheat-menu">
       {contextHolder}
+      {collectionError&&<div className="wolf-collection-error">物品识别失败：{collectionError}（重新连接游戏后重试）</div>}
       <LoadingOverlay visible={!gameReady} />
       <GameFeatureProvider
         features={features}

@@ -8,6 +8,25 @@
   overflow: hidden;
 }
 
+.runtime-page {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #f7f9fc;
+}
+.runtime-page > * { flex-shrink: 0; }
+.runtime-page .tool-page-header { max-width: none; }
+.wolf-collection-page { display:flex; flex-direction:column; flex:1; min-height:0; gap:8px; padding:12px 16px; overflow:hidden; }
+.wolf-collection-toolbar { flex-shrink:0; }
+.wolf-collection-error { padding:4px 16px; color:#b54708; font-size:12px; }
+.runtime-page { padding:16px; gap:10px; }
+.runtime-page .ant-card-body { padding:14px 18px; }
+.runtime-page .ant-alert { padding:6px 10px; font-size:12px; }
+
 .cheat-menu-tabs > .ant-tabs-nav {
   flex: 0 0 auto;
   margin: 0;

@@ -26,11 +26,14 @@ export interface GameShortcutPolicy {
 }
 
 export interface GameEngineAdapter {
+  readonly collections?:import("./database").GameCollectionAccess;
+  readonly database?: import("./database").GameDatabaseAccess;
+  readonly sessionId?: string;
   readonly features: GameFeatureReaders;
   readonly shortcutActions: ReadonlySet<GameShortcutActionId>;
   readonly shortcutPolicy: GameShortcutPolicy;
   init(): Promise<boolean>;
-  setGameGold(amount: number): Promise<void>;
+  setGameGold?(amount: number,expectation?:import("./database").GoldWriteExpectation): Promise<void>;
   modifyVariables?(id: number, value: number | string): Promise<void>;
   modifySwitches?(id: number, value: boolean): Promise<void>;
   gainItems?(id: number, count: number, gainType: string): Promise<void>;
@@ -40,7 +43,7 @@ export interface GameEngineAdapter {
   achieveVictory?(): Promise<void>;
   achieveDefeat?(): Promise<void>;
   escapeBattle?(): Promise<void>;
-  setSomeGameSettings(type: string, value: any): Promise<void>;
+  setSomeGameSettings?(type: string, value: any): Promise<void>;
 }
 
 export type EngineType = "MV" | "MZ" | "wolf" | null;

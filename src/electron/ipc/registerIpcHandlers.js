@@ -33,7 +33,7 @@ function safeAIError(error, fallback) {
 
 export function registerIpcHandlers({
   getMainWindow,
-  gameInjectionService,
+  gameSessionService,
   globalShortcutService,
 }) {
   ipcMain.handle("choose-game", async () => {
@@ -52,11 +52,11 @@ export function registerIpcHandlers({
     return detectGame(exePath);
   });
 
-  ipcMain.handle("inject-script", async (_event, gameInfo) => {
-    return gameInjectionService.injectAndLaunch(gameInfo);
-  });
-
-  ipcMain.handle("inject-other", async () => {});
+  ipcMain.handle("game:launch", async (_event, exePath) => gameSessionService.launch(exePath));
+  ipcMain.handle("game:snapshot", () => gameSessionService.snapshot());
+  ipcMain.handle("game:database-read", (_event,sessionId,request)=>gameSessionService.readDatabase(sessionId,request));
+  ipcMain.handle("game:gold-source", (_event,sessionId,target)=>gameSessionService.selectGoldSource(sessionId,target));
+  ipcMain.handle("game:gold-write", (_event,sessionId,value,expectation)=>gameSessionService.setGold(sessionId,value,expectation));
 
   ipcMain.handle("apply-filters", async (_event, { gameInfo }) => {
     return extractGameText(gameInfo);
