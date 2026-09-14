@@ -11,6 +11,7 @@ node_modules
 dist
 dist-react
 dist-electron
+native/build/
 agent_work
 *.local
 *.ctool-ai-work.json

@@ -16,7 +16,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "build:main": "esbuild src/electron/main.js --bundle --platform=node --target=node18 --format=esm --outdir=dist-electron",
-    "dist": "npm run build && electron-builder --win"
+    "dist": "npm run build && npm run build:native && electron-builder --win",
+    "build:native": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-native.ps1",
+    "test:wolf": "node --test tests/wolf/*.test.js",
+    "test:native": "node scripts/smoke-wolf.mjs"
   },
   "dependencies": {
     "archiver": "^7.0.1",
@@ -83,6 +86,14 @@
         "filter": [
           "cheat.js",
           "translator.js"
+        ]
+      },
+      {
+        "from": "native/build/Release",
+        "to": "native/wolf/x86",
+        "filter": [
+          "inject-x86.exe",
+          "ctool-wolf-x86.dll"
         ]
       }
     ],
