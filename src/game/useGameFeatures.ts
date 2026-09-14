@@ -2,10 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { createEmptyGameFeatures } from "@/game/features";
 import { getEngineAdapter } from "@/game/registry";
 import { getShortcutActions } from "@/game/shortcutActions";
-import type {
-  GameFeatureDataMap,
-  GameFeatureKey,
-} from "@/game/features";
+import type { GameFeatureDataMap, GameFeatureKey } from "@/game/features";
 import type {
   EngineType,
   GameCapability,
@@ -13,19 +10,25 @@ import type {
   GameShortcutActionId,
 } from "@/game/types";
 
-export function useGameFeatures(engineType: EngineType) {
+export function useGameFeatures(
+  engineType: EngineType,
+  sessionId?: string,
+  available?: readonly GameCapability[],
+) {
   const [features, setFeatures] = useState(createEmptyGameFeatures);
   const adapter = useMemo(
-    () => getEngineAdapter(engineType),
-    [engineType],
+    () => getEngineAdapter(engineType, sessionId),
+    [engineType, sessionId],
   );
   const capabilities = useMemo(
     () =>
-      new Set<GameCapability>([
-        ...(Object.keys(adapter.features) as GameFeatureKey[]),
-        ...(adapter.sendTranslationData ? (["translation"] as const) : []),
-      ]),
-    [adapter],
+      new Set<GameCapability>(
+        [
+          ...(Object.keys(adapter.features) as GameFeatureKey[]),
+          ...(adapter.sendTranslationData ? (["translation"] as const) : []),
+        ].filter((key) => !available || available.includes(key)),
+      ),
+    [adapter, available],
   );
 
   const refreshFeature = useCallback(
@@ -48,13 +51,15 @@ export function useGameFeatures(engineType: EngineType) {
     feature: GameFeatureKey,
     action: (currentAdapter: GameEngineAdapter) => Promise<void> | undefined,
   ) => {
-    await action(adapter);
+    const operation = action(adapter);
+    if (!operation) throw new Error("当前引擎不支持此操作");
+    await operation;
     await refreshFeature(feature);
   };
 
   const modifyGold = (amount: number) =>
     modify("overview", (currentAdapter) =>
-      currentAdapter.setGameGold(amount),
+      currentAdapter.setGameGold?.(amount),
     );
 
   const modifyVariable = (id: number, value: number | string) =>
@@ -83,9 +88,7 @@ export function useGameFeatures(engineType: EngineType) {
     modify("actors", (currentAdapter) => currentAdapter.setInTeam?.(ids));
 
   const setActorData = (actor: unknown) =>
-    modify("actors", (currentAdapter) =>
-      currentAdapter.setActorData?.(actor),
-    );
+    modify("actors", (currentAdapter) => currentAdapter.setActorData?.(actor));
 
   const sendTranslationData = async (translated: unknown) => {
     await adapter.sendTranslationData?.(translated);
@@ -105,7 +108,7 @@ export function useGameFeatures(engineType: EngineType) {
 
   const setSomeGameSettings = (type: string, value: unknown) =>
     modify("overview", (currentAdapter) =>
-      currentAdapter.setSomeGameSettings(type, value),
+      currentAdapter.setSomeGameSettings?.(type, value),
     );
 
   const shortcutActions = useMemo(
@@ -125,28 +128,21 @@ export function useGameFeatures(engineType: EngineType) {
       return achieveDefeat();
     }
 
-    const overview =
-      features.overview ?? (await refreshFeature("overview"));
+    const overview = features.overview ?? (await refreshFeature("overview"));
     const settingActions = {
       toggleThrough: ["through", !overview.through],
-      toggleEncounter: [
-        "isEncounterEnabled",
-        !overview.isEncounterEnabled,
-      ],
-      toggleFormation: [
-        "isFormationEnabled",
-        !overview.isFormationEnabled,
-      ],
-      toggleOneHitKill: [
-        "oneHitKillEnabled",
-        !overview.oneHitKillEnabled,
-      ],
+      toggleEncounter: ["isEncounterEnabled", !overview.isEncounterEnabled],
+      toggleFormation: ["isFormationEnabled", !overview.isFormationEnabled],
+      toggleOneHitKill: ["oneHitKillEnabled", !overview.oneHitKillEnabled],
     } as const;
     const [setting, value] = settingActions[actionId];
     return setSomeGameSettings(setting, value);
   };
 
   return {
+    database: adapter.database,
+    collections: adapter.collections,
+    setRuntimeGold: adapter.setGameGold,
     features,
     capabilities,
     shortcutActions,

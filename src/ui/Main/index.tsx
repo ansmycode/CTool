@@ -1,6 +1,7 @@
 // App.tsx
 import React, { lazy, Suspense, useEffect, useState } from "react";
-import { Layout, Button, message, Spin, Tabs } from "antd";
+import { Layout, Button, message, Spin, Tabs, Alert } from "antd";
+import type { DetectedGame, GameSessionSnapshot } from "@/types/GameSession";
 import { InboxOutlined } from "@ant-design/icons";
 const { Content, Footer } = Layout;
 
@@ -17,29 +18,30 @@ const pageFallback = (
 );
 
 const Main: React.FC = () => {
-  const [gameInfo, setGameInfo] = useState<any>({});
-  const [isGameStarting, setIsGameStarting] = useState<boolean>(false);
+  const [gameInfo, setGameInfo] = useState<DetectedGame | null>(null);
+  const [session, setSession] = useState<GameSessionSnapshot | null>(null);
+  const [launchBusy, setLaunchBusy] = useState(false);
   const [activeKey, setActiveKey] = useState("1");
+  const isGameStarting = session?.processState === "running" ||
+    (session?.state === "launching" && !["failed", "closed"].includes(session.state));
 
+  const applySession = (next: GameSessionSnapshot | null) => {
+    if (next) setSession((current) => !current || next.revision > current.revision ? next : current);
+  };
   const chooseGame = async () => {
-    const _gamePath = await (window as any).electronAPI.chooseGame();
-    const _gameInfo = await (window as any).electronAPI.detectEngine(_gamePath);
-    setGameInfo(_gameInfo);
+    try {
+      const file = await window.electronAPI.chooseGame();
+      if (file) setGameInfo(await window.electronAPI.detectEngine(file));
+    } catch (error) { message.error(error instanceof Error ? error.message : "识别失败"); }
   };
-
-  const handleLaunchGame = async (info: any) => {
-    if (info.engine === "MV" || info.engine === "MZ") {
-      const result = await (window as any).electronAPI.injectScript(info);
-      setIsGameStarting(result);
-    } else {
-      message.warning("暂时只支持RpgMaker MV/MZ引擎的游戏");
-    }
+  const handleLaunchGame = async (info: { gamePath: string }) => {
+    if (launchBusy) return;
+    setLaunchBusy(true);
+    try { applySession(await window.electronAPI.launchGame(info.gamePath)); }
+    catch (error) { message.error(error instanceof Error ? error.message : "启动失败"); }
+    finally { setLaunchBusy(false); }
   };
-
-  const historyLaunchGame = (infoFromHistory: any) => {
-    setGameInfo(infoFromHistory);
-    handleLaunchGame(infoFromHistory);
-  };
+  const historyLaunchGame = (info: { gamePath: string }) => { void handleLaunchGame(info); };
 
   const openFakeGamePreview = () => {
     const url = new URL(window.location.href);
@@ -48,14 +50,13 @@ const Main: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!window.electronAPI?.onReceiveMessage) return;
-    return window.electronAPI.onReceiveMessage(
-      "game-closed",
-      (_: unknown, result: any) => {
-        setIsGameStarting(result.isGameStarting);
-        setGameInfo({});
-      },
-    );
+    if (!window.electronAPI?.onGameSessionChanged) return;
+    let mounted = true;
+    const off = window.electronAPI.onGameSessionChanged((next) => { if (mounted) applySession(next); });
+    void window.electronAPI.getGameSession()
+      .then((next) => { if (mounted) applySession(next); })
+      .catch(() => { if (mounted) message.error("无法获取游戏会话状态"); });
+    return () => { mounted = false; off(); };
   }, []);
 
   const tabsItems = [
@@ -67,7 +68,7 @@ const Main: React.FC = () => {
           <div className="launch-heading">
             <div>
               <h2>启动游戏</h2>
-              <p>选择 RPG Maker MV / MZ 游戏的 Game.exe，识别完成后即可启动。</p>
+              <p>选择 RPG Maker MV / MZ 或已适配的 Wolf 游戏启动文件。</p>
             </div>
             {import.meta.env.DEV && (
               <Button size="small" onClick={openFakeGamePreview}>
@@ -85,11 +86,11 @@ const Main: React.FC = () => {
               点击选择 <strong>游戏启动文件Game.exe</strong>
             </p>
           </div>
-          {gameInfo.gamePath && (
+          {gameInfo?.gamePath && (
             <section className="tool-gameinfo">
               <div className="gameinfo-title">
                 <strong>游戏识别结果</strong>
-                <span>{gameInfo?.engine ? "可以启动" : "暂不支持"}</span>
+                <span>{gameInfo?.supported ? "可以启动" : "暂不支持"}</span>
               </div>
               <div className="gameinfo-details">
                 <span className="gameinfo-label">启动文件</span>
@@ -101,14 +102,16 @@ const Main: React.FC = () => {
                 <span className="gameinfo-label">引擎版本</span>
                 <span>{gameInfo?.version || "未知"}</span>
               </div>
+              {gameInfo.supportMessage && <p>{gameInfo.supportMessage}</p>}
               <div className="gameinfo-actions">
-                {gameInfo?.engine ? (
+                {gameInfo?.supported ? (
                   <Button
                   type="primary"
                   onClick={() => handleLaunchGame(gameInfo)}
-                  disabled={!gameInfo?.engine}
+                  disabled={!gameInfo?.supported || launchBusy}
+                  loading={launchBusy}
                   >
-                    启动游戏并注入脚本
+                    启动游戏并连接
                   </Button>
                 ) : (
                   <span className="gameinfo-unsupported">不支持或未知引擎</span>
@@ -143,9 +146,22 @@ const Main: React.FC = () => {
       <Content
         className="tool-content"
       >
+        {session?.state === "failed" && !isGameStarting && <Alert type="error" showIcon message={session.message} />}
         <Suspense fallback={pageFallback}>
           {isGameStarting ? (
-            <CheatMenu isGameStarting={isGameStarting} gameInfo={gameInfo} />
+            session?.game && ((session.state === "ready" && session.capabilities.length > 0)||session.databaseReadOnly) ? (
+              <CheatMenu key={session.sessionId} isGameStarting={true} gameInfo={session.game} session={session} />
+            ) : (
+              <section className="launch-page">
+                <h2>{session?.game?.title || "游戏会话"}</h2>
+                <Alert type={session?.state === "failed" ? "error" : "info"}
+                  showIcon message={session?.message || "正在启动"}
+                  description={session?.state === "degraded"
+                    ? "数据库按需只读访问；金币按基本系统规则识别，也可手动绑定数字字段。修改和翻译尚未开放。"
+                    : "请等待游戏初始化；游戏退出后会返回启动页。"} />
+                <p>PID：{session?.pid ?? "—"} · 引擎：{session?.game?.engine ?? "—"} · 版本：{session?.game?.version ?? "—"}</p>
+              </section>
+            )
           ) : (
             <Tabs
               className="tool-tabs"

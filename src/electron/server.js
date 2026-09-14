@@ -1,5 +1,5 @@
 import http from 'http';
-export function createServer(mainWindow) {
+export function createServer(onReady) {
   const server = http.createServer((req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
 
@@ -17,9 +17,7 @@ export function createServer(mainWindow) {
 
       console.log("游戏已加载完成");
 
-      if (mainWindow) {
-        mainWindow.webContents.send("game-ready",true);
-      }
+      onReady();
 
       res.writeHead(200, { "Content-Type": "text/plain" });
       res.end("OK");
