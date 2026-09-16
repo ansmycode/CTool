@@ -40,7 +40,7 @@ static DWORD WINAPI bootstrap(void*) {
   if (pipe == INVALID_HANDLE_VALUE) return 2;
   const std::string base = "\"protocolVersion\":1,\"sessionId\":\"" + session +
     "\",\"nonce\":\"" + nonce + "\",\"pid\":" + std::to_string(GetCurrentProcessId());
-  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"goldWriteProtocol\":1,\"capabilities\":[]}")) {
+  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"goldWriteProtocol\":1,\"inventoryWriteProtocol\":1,\"capabilities\":[]}")) {
     CloseHandle(pipe); return 3;
   }
   wolf::DatabaseReader reader;
@@ -72,10 +72,12 @@ static DWORD WINAPI bootstrap(void*) {
         } else if(op=="page"){
           if(!(input>>kind>>t>>start>>limit>>fs>>fl)||input>>extra||kind>2||t>=4096||start>100000||limit>10||fs>4096||fl>16)throw std::runtime_error("invalid_request");
           payload=reader.page(static_cast<uint32_t>(kind),static_cast<uint32_t>(t),static_cast<uint32_t>(start),static_cast<uint32_t>(limit),static_cast<uint32_t>(fs),static_cast<uint32_t>(fl));
-        }else if(op=="goldwrite"){
+        }else if(op=="goldwrite"||op=="inventorywrite"){
           int64_t expected=0,value=0;
           if(!(input>>kind>>t>>start>>fs>>expected>>value)||input>>extra||kind!=1||t>=4096||start>=100000||fs>=4096||
              expected<INT32_MIN||expected>INT32_MAX||value<0||value>INT32_MAX)throw std::runtime_error("invalid_request");
+          // This only resolves an existing number cell. Whether it is gold or
+          // a verified inventory quantity is decided by the host mapping.
           payload=reader.writeGold(static_cast<uint32_t>(kind),static_cast<uint32_t>(t),static_cast<uint32_t>(start),static_cast<uint32_t>(fs),static_cast<int32_t>(expected),static_cast<int32_t>(value));
         }else throw std::runtime_error("unknown_operation");
       } catch(const std::exception& e){payload="{\"status\":\"unavailable\",\"reason\":"+wolf::quote(e.what())+"}";}
