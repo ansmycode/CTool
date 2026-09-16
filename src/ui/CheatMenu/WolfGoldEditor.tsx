@@ -9,8 +9,8 @@ import {
   message,
 } from "antd";
 
-/** Engine-neutral editor. Keep the original value while editing to detect conflicts. */
-export default function GoldEditor({
+/** Wolf keeps the original value while editing to detect runtime conflicts. */
+export default function WolfGoldEditor({
   value,
   disabled = false,
   onApply,

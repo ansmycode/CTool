@@ -47,12 +47,16 @@ Wolf 使用 inject-x86.exe 创建并在 PE 入口点暂时暂停游戏，注入 
 ### 2. 运行时游戏数据链路
 
 ```text
-CheatMenu 页面
-  -> useGameFeatures（统一状态与修改动作）
-  -> registry 选择 GameEngineAdapter
-  -> MV/MZ adapter
+MvmzCheatMenu 页面
+  -> useGameFeatures（MV/MZ 状态与修改动作）
+  -> registry 选择 MV/MZ adapter
   -> HTTP localhost:5000
   -> inject/cheat.js 中的游戏内服务
+
+WolfCheatMenu 页面
+  -> Wolf adapter 的 database / collections 接口
+  -> 会话专用 IPC
+  -> injector + DLL Named Pipe
 ```
 
 - 统一数据结构：`src/game/features.ts`
@@ -61,20 +65,21 @@ CheatMenu 页面
 - MV/MZ Adapter：`src/game/adapters/mvmz.ts`
 - 状态与操作编排：`src/game/useGameFeatures.ts`
 - 向子页面提供单项数据：`src/game/GameFeatureContext.tsx`
-- 功能页注册与能力过滤：`src/ui/CheatMenu/tabRegistry.tsx`
+- MV/MZ 功能页注册与能力过滤：`src/ui/CheatMenu/tabRegistry.tsx`
+- 引擎 UI 分流：`src/ui/CheatMenu/index.tsx`；具体页面为 `MvmzCheatMenu.tsx`、`WolfCheatMenu.tsx`
 - HTTP 封装：`src/lib/http.ts`
 
 `localhost:5000` 是注入到游戏中的数据服务。`localhost:5001` 是 Electron 自己监听的回调服务，游戏加载完成后向 `/gameReady` 发消息，由主进程转为会话 ready 状态。不要交换这两个端口的职责。
 
 ## 主要目录
 
-2026-09-14 库存展示规则更新：已注册定义为主表，成功读取且映射明确的背包按 ID 覆盖数量；缺少持有记录显示 0，读取失败/未确认映射保持不可用。显示 0 不会创建游戏记录，也不代表存在可写地址。共用 InventoryTable 渲染 MV/MZ 和 Wolf；MV/MZ 经 useGameFeature，Wolf 保留动态 collections 编排，见 [复用评估](docs/WOLF_UI_REUSE.md)。
+2026-09-14 库存展示规则更新：已注册定义为主表，成功读取且映射明确的背包按 ID 覆盖数量；缺少持有记录显示 0，读取失败/未确认映射保持不可用。显示 0 不会创建游戏记录，也不代表存在可写地址。MV/MZ 使用 `InventoryTable`；Wolf 使用独立 `WolfInventoryTable` 与动态 collections 编排，仅复用搜索、滚动和草稿值等无业务语义的基础组件。
 
 Wolf 物品分类由映射结果生成独立标签页，每分类完整虚拟滚动表，无 UI 分页。DLL 已连通但运行时数据库尚未构造时，Wolf 启动遮罩会以短间隔重试目录读取，分类成功后才解除；正常使用阶段不后台轮询，仅在焦点、手动刷新或写入后更新活动分类。底层仍按 10 行分批读取，库存边界查询运行时行数，不以初始缓存行数跳过后续数据。读取失败与未确认映射不能按零库存处理。
 
 Wolf 普通 UI 展示金币控制台和物品资料；原始数据库、手动金币候选和详细诊断只在 DEV 可见。Wolf adapter 独有 collections 接口通过 databaseMapping.js 和 wolfCollections.ts 解释可选基本系统语义，不向 MV/MZ 添加虚假能力。映射规则、MY 三项库存核验及多游戏扩展边界见 [Wolf 映射](docs/WOLF_MAPPING.md)。金币双向修改已由用户验收；确认映射的现有库存行可修改，缺失记录不创建。
 
-Wolf 已进入统一 CheatMenu，RuntimeConsole 展示会话金币与诊断，数据库单列页签；GoldEditor 与 MV/MZ 主页共用显式提交。setGameGold 经会话专用 IPC 调用，需 goldWriteProtocol=1；只允许当前绑定的可变数据库数字字段并核对旧值、回读确认。数据库浏览 IPC 不允许写入。原生后台单值写入不是主线程事务，不在读档/切场景期间使用；不要把未知背包布局直接套用 MV/MZ。
+UI 在 `CheatMenu/index.tsx` 按引擎分流：`MvmzCheatMenu` 只维护 MV/MZ 页签、原有加载遮罩与功能刷新，`WolfCheatMenu` 只维护 DLL 初始化遮罩、动态库存和 DEV 数据库页。Wolf 的首个“基础功能”页由 `WolfBaseFeaturesPage` 承载，当前只有经验证的金币能力，后续速度、战斗或角色能力也在这里增加；`WolfGoldReadout/WolfGoldEditor` 只是该页内部的金币控件。MV/MZ 主页保留自己的紧凑金币输入框和失焦提交行为。setGameGold 经会话专用 IPC 调用，需 goldWriteProtocol=1；只允许当前绑定的可变数据库数字字段并核对旧值、回读确认。数据库浏览 IPC 不允许写入。原生后台单值写入不是主线程事务，不在读档/切场景期间使用；不要把未知背包布局直接套用 MV/MZ。
 
 ```text
 src/ui/                 React 页面；Main 负责选游戏，CheatMenu 负责运行时功能
@@ -100,7 +105,8 @@ tool_data/              打包时随应用分发的工具数据
 | 任务 | 优先读取 |
 | --- | --- |
 | 修改启动页、历史页或顶层导航 | `src/ui/Main/index.tsx`，再读对应 `src/ui/*` 页面 |
-| 增改修改器页面 | `src/ui/CheatMenu/tabRegistry.tsx`、目标页面、`src/game/features.ts`、`src/game/useGameFeatures.ts` |
+| 增改 MV/MZ 修改器页面 | `src/ui/CheatMenu/MvmzCheatMenu.tsx`、`tabRegistry.tsx`、目标页面、`src/game/features.ts`、`src/game/useGameFeatures.ts` |
+| 增改 Wolf 修改器页面 | `src/ui/CheatMenu/WolfCheatMenu.tsx`、`CollectionBrowser.tsx`、`WolfInventoryTable.tsx`、Wolf adapter 与会话 IPC |
 | 新增游戏数据能力或接口 | 上述文件，再读 `src/game/types.ts`、`src/game/adapters/mvmz.ts`、`inject/cheat.js` |
 | 支持新游戏引擎 | `src/game/types.ts`、`src/game/registry.ts`、新 Adapter、检测/注入服务；不要把 MV/MZ 分支散落进 UI |
 | 修改游戏选择、文件操作或系统能力 | `src/electron/preload.js`、`src/global.d.ts`、`src/electron/ipc/registerIpcHandlers.js`、对应 service |

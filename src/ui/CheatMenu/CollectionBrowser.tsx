@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Space, Tooltip, Typography } from "antd";
 import type { GameCollection, GameCollectionAccess } from "@/game/database";
-import InventoryTable from "./InventoryTable";
+import WolfInventoryTable from "./WolfInventoryTable";
 type Row = Awaited<ReturnType<GameCollectionAccess["page"]>>["rows"][number];
 export default function CollectionBrowser({
   access,
@@ -54,18 +54,6 @@ export default function CollectionBrowser({
       disposed = true;
     };
   }, [access, group.key, active, revision, refreshToken]);
-  const tableRows = useMemo(
-    () =>
-      rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        description: row.description,
-        playerHasCount: row.owned,
-        countError: row.ownedReason,
-        countWritable: row.writable,
-      })),
-    [rows],
-  );
   const changeCount = async (id: number, value: number) => {
     const row = rows.find((item) => item.id === id);
     if (!writeEnabled || !row || row.owned === undefined || !row.writable || !row.inventoryTarget) return;
@@ -78,28 +66,18 @@ export default function CollectionBrowser({
   };
   return (
     <div className="wolf-collection-page">
-      <InventoryTable
-        rows={tableRows}
+      <Space className="wolf-collection-toolbar" wrap>
+        <Typography.Text type="secondary">{group.writable && writeEnabled ? "可修改已分配的数量槽" : "数量只读"}</Typography.Text>
+        <Button size="small" loading={loading} onClick={() => setRevision((x) => x + 1)}>刷新</Button>
+        <Tooltip title="列出全部物品定义，用背包数量按 ID 匹配；背包中没有的物品显示 0。读取失败或映射未确认时显示未知。">
+          <Typography.Text type="secondary">说明 ⓘ</Typography.Text>
+        </Tooltip>
+        <Typography.Text type="secondary">{progress}</Typography.Text>
+      </Space>
+      <WolfInventoryTable
+        rows={rows}
         onChangeCount={group.writable && writeEnabled ? changeCount : undefined}
-        showId={false}
-        showDescription
         emptyText={loading ? "正在读取资料…" : "没有匹配条目"}
-        toolbar={
-          <Space className="wolf-collection-toolbar" wrap>
-            <Typography.Text type="secondary">{group.writable && writeEnabled ? "可修改已分配的数量槽" : "数量只读"}</Typography.Text>
-            <Button
-              size="small"
-              loading={loading}
-              onClick={() => setRevision((x) => x + 1)}
-            >
-              刷新
-            </Button>
-            <Tooltip title="列出全部物品定义，用背包数量按 ID 匹配；背包中没有的物品显示 0。读取失败或映射未确认时显示未知。">
-              <Typography.Text type="secondary">说明 ⓘ</Typography.Text>
-            </Tooltip>
-            <Typography.Text type="secondary">{progress}</Typography.Text>
-          </Space>
-        }
       />
       {error && <Typography.Text type="danger">{error}</Typography.Text>}
     </div>

@@ -25,9 +25,6 @@ const TranslateTool = lazy(() => import("./translateTool/index"));
 const ShortcutSettings = lazy(() => import("./shortcuts/index"));
 
 interface CheatMenuContext {
-  runtime?: ReactNode;
-  collections?: {key:string;label:string;children:ReactNode}[];
-  database?: ReactNode;
   gameInfo: any;
   modifyGold: (amount: number) => Promise<void>;
   modifyVariable: (id: number, value: number | string) => Promise<void>;
@@ -191,12 +188,7 @@ export function createCheatMenuTabs(
   capabilities: ReadonlySet<GameCapability>,
   context: CheatMenuContext,
 ): TabsProps["items"] {
-  const runtimeTabs = context.runtime ? [
-    {key:"runtime",label:"游戏控制台",children:context.runtime,className:"tab-pane-fullheight"},
-    ...(context.collections??[]).map(tab=>({...tab,className:"tab-pane-fullheight"})),
-    ...(import.meta.env.DEV&&context.database?[{key:"database",label:"数据库调试（DEV）",children:context.database,className:"tab-pane-fullheight"}]:[]),
-  ] : [];
-  return [...runtimeTabs,...tabDefinitions
+  return tabDefinitions
     .filter(({key})=>key!=="9"||context.shortcutActions.length>0)
     .filter(({ capability }) => !capability || capabilities.has(capability))
     .map(({ key, label, render }) => ({
@@ -204,5 +196,5 @@ export function createCheatMenuTabs(
       label,
       children: withPageFallback(render(context)),
       className: "tab-pane-fullheight",
-    }))];
+    }));
 }

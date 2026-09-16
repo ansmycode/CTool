@@ -1,9 +1,13 @@
 import { Alert, Card, Collapse, Space, Tag, Typography } from "antd";
 import type { GameSessionSnapshot } from "@/types/GameSession";
 import type { GameDatabaseAccess, GoldWriteExpectation } from "@/game/database";
-import GoldReadout from "@/ui/Main/GoldReadout";
+import WolfGoldReadout from "./WolfGoldReadout";
 
-export default function RuntimeConsole({
+/**
+ * Wolf's extensible base-feature page. Gold is only the first verified action;
+ * later speed, battle, and actor features belong here when their hooks exist.
+ */
+export default function WolfBaseFeaturesPage({
   session,
   access,
   onWrite,
@@ -32,7 +36,7 @@ export default function RuntimeConsole({
         </Space>
       </header>
       <Card>
-        <GoldReadout
+        <WolfGoldReadout
           gold={session.telemetry?.gold}
           access={access}
           onWrite={session.goldWritable ? onWrite : undefined}
@@ -46,7 +50,7 @@ export default function RuntimeConsole({
         )}
       </Card>
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        金币可修改，库存只读。游戏菜单若未更新，请重新打开菜单。
+        金币可修改；已确认且已分配的库存数量可修改。游戏菜单若未更新，请重新打开菜单。
       </Typography.Text>
       {import.meta.env.DEV && (
         <Collapse
