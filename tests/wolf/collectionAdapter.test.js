@@ -29,6 +29,7 @@ test("runtime inventory growth beyond cached 10 rows remains readable on later b
   const {adapter,requests}=fixture();const [group]=await adapter.list();
   const page=await adapter.page(group.key,10);
   assert.equal(page.rows[0].id,10);assert.equal(page.rows[0].owned,50);
+  assert.equal(page.rows[0].writable,true);assert.deepEqual(page.rows[0].inventoryTarget,{kind:1,table:7,row:10,field:0});
   assert.ok(requests.some(r=>r.kind===1&&r.operation==="page"&&r.start===0));
   assert.ok(requests.some(r=>r.kind===1&&r.operation==="page"&&r.start===10));
   const tail=await adapter.page(group.key,20);assert.equal(tail.rows.length,5);assert.equal(tail.rows[4].owned,64);
@@ -36,7 +37,7 @@ test("runtime inventory growth beyond cached 10 rows remains readable on later b
 test("registered items missing from successfully read inventory have zero count",async()=>{
   const {adapter}=fixture({total:10});const [group]=await adapter.list();
   const page=await adapter.page(group.key,10);
-  assert.equal(page.rows[0].owned,0);assert.equal(page.rows[0].ownedReason,undefined);
+  assert.equal(page.rows[0].owned,0);assert.equal(page.rows[0].ownedReason,undefined);assert.equal(page.rows[0].writable,false);
 });
 test("definitions are retained and inventory quantities override zero by id",async()=>{
   const {adapter}=fixture({total:12});const [group]=await adapter.list();

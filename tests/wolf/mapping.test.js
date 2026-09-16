@@ -10,7 +10,7 @@ test("mapping uses structure and names, not MY ids or field order",()=>{
     const d=definition(id);d.fields.reverse();
     const [m]=discoverCollections([d],[stock(id+1),party]);
     assert.equal(m.definition.table,id);assert.equal(m.definition.nameField,0);
-    assert.equal(m.inventoryCandidate.table,id+1);assert.equal(m.inventoryStatus,"basic-system-readonly");assert.equal(m.writable,false);
+    assert.equal(m.inventoryCandidate.table,id+1);assert.equal(m.inventoryStatus,"basic-system-readonly");assert.equal(m.writable,true);
   }
 });
 test("independent namespaces cannot cross-link inventories",()=>{

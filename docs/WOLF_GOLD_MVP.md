@@ -4,7 +4,7 @@
 
 旧版按日文名称定向读取已替换为通用数据库读取与独立语义层。原生层不解释金币，不要求表名为パーティー情報。
 
-链路：GameEngineAdapter.database → preload/IPC → 当前会话 wolfDriver → injector stdin → 双向 Named Pipe → DLL DatabaseReader → 认证 RPC 响应 → 数据库浏览器。主进程金币规则通过同一接口查目录、轮询单元格，再经 telemetry.gold 显示。
+链路：GameEngineAdapter.database → preload/IPC → 当前会话 wolfDriver → injector stdin → 双向 Named Pipe → DLL DatabaseReader → 认证 RPC 响应 → 数据库浏览器。主进程金币规则通过同一接口查目录，并在首次连接或 CTool 获得焦点时读取单元格，再经 telemetry.gold 显示。
 
 - 分页浏览用户数据库、可变数据库、系统数据库的表、字段、记录及数字/字符串值。
 - 目录每次最多 8 张表，每张返回前 64 个字段；记录每页最多 10 行、16 列，可继续翻列。字符串有长度限制，不是完整导出。
@@ -55,7 +55,7 @@ GamePro.exe 版本资源 3.595.2025.503，x86。可变数据库 99 张表；type
 
 - npm run build:native、npm run build：原生与前端构建。
 - native/build/Release/wolf-database-test.exe：合成内存；不对称表维度、自定义名称、数字/字符串、分页、非法指针和歧义。
-- npm run test:wolf：语义规则、RPC 边界、轮询及会话失效。
+- npm run test:wolf：语义规则、RPC 边界、按焦点刷新及会话失效。
 - npm run test:native：仅自建窗口，验证注入、握手、工具目录请求和 DLL unavailable 响应，不证明真实游戏读取成功。
 
 用户自行完整重启 CTool 和游戏，进入地图/读档后检查：
@@ -71,6 +71,6 @@ GamePro.exe 版本资源 3.595.2025.503，x86。可变数据库 99 张表；type
 - native/wolf/database_reader.h：通用结构读取。
 - native/wolf/main.cpp、native/injector/main.cpp：双向传输。
 - src/electron/wolf/databaseProtocol.js：边界与请求关联。
-- src/electron/wolf/databaseSemantics.js、goldMonitor.js：语义与轮询。
+- src/electron/wolf/databaseSemantics.js、goldMonitor.js：语义与按焦点刷新。
 - src/game/database.ts、src/game/adapters/wolf.ts：统一只读接口。
 - src/ui/Main/DatabaseBrowser.tsx、GoldReadout.tsx：浏览与显示。

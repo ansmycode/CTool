@@ -6,9 +6,11 @@
 
 CTool 是一个仅面向 Windows 的 Electron 桌面工具，用于识别并启动 RPG Maker MV / MZ 游戏。它会以 RPG Maker 插件的方式临时注入本地脚本，让 React 界面通过 localhost 读取和修改运行中的游戏数据；同时提供文本提取、实时翻译、数据内嵌翻译、备份还原和 AI 批量翻译。
 
-完整游戏功能目前支持 RPG Maker MV / MZ；Wolf 已实现 x86 识别、原生启动、DLL 双向通信、金币修改及物品资料/基本系统库存只读展示，启动不受哈希白名单限制。MY 金币双向修改已由用户验收；三项道具库存已通过只读探针对照用户报告。其他游戏布局仍待验证；尚无库存/角色修改、文本采集或翻译 Hook。原始数据库浏览仅保留 DEV 入口。
+完整游戏功能目前支持 RPG Maker MV / MZ；Wolf 已实现 x86 识别、原生启动、DLL 双向通信、金币修改及基本系统已分配道具/武器/防具数量修改，启动不受哈希白名单限制。MY 金币双向修改已由用户验收；三项道具库存已通过只读探针对照用户报告。库存写入仅限已存在的数量行，尚不创建缺失记录；其他游戏布局仍待验证；尚无角色修改、文本采集或翻译 Hook。原始数据库浏览仅保留 DEV 入口。
 
 Wolf 完整设计见 [适配方案](docs/WOLF_IMPLEMENTATION_PLAN.md)，实际落地范围、构建方式和样本测试记录见 [P0/P1 状态](docs/WOLF_P1_STATUS.md)。先区分已实现与后续计划。
+
+理解现有 Wolf 实现优先读 [代码导读](docs/WOLF_CODE_WALKTHROUGH.md)：逐层解释启动注入、特征扫描、数据库指针链、业务映射、按焦点刷新、金币写入及现有库存写入范围。当前数据库访问是内存扫描读取，不是数据库函数 Hook。
 
 技术栈：Electron 37、React 19、TypeScript 5、Vite 7、Ant Design 5。Electron 主进程与测试代码主要使用原生 ESM JavaScript，渲染层主要使用 TypeScript/TSX。
 
@@ -40,7 +42,7 @@ React UI
 
 MV/MZ 注入时，CTool 将两个脚本复制到游戏的 `js/plugins`，并把插件项加入 `js/plugins.js`。游戏进程退出后会清理本次添加的插件项和文件。异常退出可能来不及清理。
 
-Wolf 使用 inject-x86.exe 创建并在 PE 入口点暂时暂停游戏，注入 DLL 后恢复运行。双向 Named Pipe 服务端在 injector 内，设置当前用户 ACL、拒绝远程连接并核对客户端 PID；请求经 helper stdin，响应经 stdout。GameEngineAdapter.database 提供会话绑定的目录/分页访问；native/wolf/database_reader.h 不解释业务字段，src/electron/wolf/databaseSemantics.js 和 goldMonitor.js 识别、轮询金币，再经 telemetry.gold 显示。DatabaseBrowser 允许只读查看及本会话金币绑定，没有开放完整修改器能力。布局、旧错误和验收范围见 [数据库与金币 MVP](docs/WOLF_GOLD_MVP.md)。
+Wolf 使用 inject-x86.exe 创建并在 PE 入口点暂时暂停游戏，注入 DLL 后恢复运行。双向 Named Pipe 服务端在 injector 内，设置当前用户 ACL、拒绝远程连接并核对客户端 PID；请求经 helper stdin，响应经 stdout。GameEngineAdapter.database 提供会话绑定的目录/分页访问；native/wolf/database_reader.h 不解释业务字段，src/electron/wolf/databaseSemantics.js 和 goldMonitor.js 在 CTool 获得焦点时识别并刷新金币，再经 telemetry.gold 显示。DatabaseBrowser 允许只读查看及本会话金币绑定，没有开放完整修改器能力。布局、旧错误和验收范围见 [数据库与金币 MVP](docs/WOLF_GOLD_MVP.md)。
 
 ### 2. 运行时游戏数据链路
 
@@ -66,11 +68,11 @@ CheatMenu 页面
 
 ## 主要目录
 
-2026-09-14 库存展示规则更新：已注册定义为主表，成功读取且映射明确的背包按 ID 覆盖数量；缺少持有记录显示 0，读取失败/未确认映射保持不可用。共用 InventoryTable 渲染 MV/MZ 和 Wolf；MV/MZ 经 useGameFeature，Wolf 保留动态 collections 编排。此条取代下文历史“缺失记录不能补 0”的表述，见 [复用评估](docs/WOLF_UI_REUSE.md)。
+2026-09-14 库存展示规则更新：已注册定义为主表，成功读取且映射明确的背包按 ID 覆盖数量；缺少持有记录显示 0，读取失败/未确认映射保持不可用。显示 0 不会创建游戏记录，也不代表存在可写地址。共用 InventoryTable 渲染 MV/MZ 和 Wolf；MV/MZ 经 useGameFeature，Wolf 保留动态 collections 编排，见 [复用评估](docs/WOLF_UI_REUSE.md)。
 
-Wolf 物品分类由映射结果生成独立标签页，每分类完整虚拟滚动表，无 UI 分页。底层仍按 10 行分批读取，仅活动分类刷新；库存边界查询运行时行数，不以初始缓存行数跳过后续数据。缺失记录、读取失败与未确认映射分别说明，不能擅自补 0。
+Wolf 物品分类由映射结果生成独立标签页，每分类完整虚拟滚动表，无 UI 分页。DLL 已连通但运行时数据库尚未构造时，Wolf 启动遮罩会以短间隔重试目录读取，分类成功后才解除；正常使用阶段不后台轮询，仅在焦点、手动刷新或写入后更新活动分类。底层仍按 10 行分批读取，库存边界查询运行时行数，不以初始缓存行数跳过后续数据。读取失败与未确认映射不能按零库存处理。
 
-Wolf 普通 UI 展示金币控制台和物品资料；原始数据库、手动金币候选和详细诊断只在 DEV 可见。Wolf adapter 独有 collections 接口通过 databaseMapping.js 和 wolfCollections.ts 解释可选基本系统语义，不向 MV/MZ 添加虚假能力。映射规则、MY 三项库存只读核验及多游戏扩展边界见 [Wolf 映射](docs/WOLF_MAPPING.md)。金币双向修改已由用户验收；库存目前只读，未知记录不补 0。
+Wolf 普通 UI 展示金币控制台和物品资料；原始数据库、手动金币候选和详细诊断只在 DEV 可见。Wolf adapter 独有 collections 接口通过 databaseMapping.js 和 wolfCollections.ts 解释可选基本系统语义，不向 MV/MZ 添加虚假能力。映射规则、MY 三项库存核验及多游戏扩展边界见 [Wolf 映射](docs/WOLF_MAPPING.md)。金币双向修改已由用户验收；确认映射的现有库存行可修改，缺失记录不创建。
 
 Wolf 已进入统一 CheatMenu，RuntimeConsole 展示会话金币与诊断，数据库单列页签；GoldEditor 与 MV/MZ 主页共用显式提交。setGameGold 经会话专用 IPC 调用，需 goldWriteProtocol=1；只允许当前绑定的可变数据库数字字段并核对旧值、回读确认。数据库浏览 IPC 不允许写入。原生后台单值写入不是主线程事务，不在读档/切场景期间使用；不要把未知背包布局直接套用 MV/MZ。
 

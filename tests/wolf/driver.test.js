@@ -25,14 +25,14 @@ test("authenticated driver routes bound gold writes and blocks write through bro
     child.stdin.on("data",chunk=>{
       const [op,id,...args]=String(chunk).trim().split(" ");if(op==="detach")return;commands.push(op);
       let payload;
-      if(op==="catalog")payload={status:"available",kind:1,total:1,tables:[{id:0,name:"パーティー情報",rowCount:1,fieldCount:7,fields}]};
+          if(op==="catalog")payload={status:"available",kind:1,total:1,tables:[{id:0,name:"パーティー情報",rowCount:1,fieldCount:7,fields}]};
       else if(op==="page")payload={status:"available",kind:1,table:0,name:"パーティー情報",total:1,fieldCount:7,fields:[fields[0]],rows:[{id:0,name:"Main",values:[amount]}]};
-      else{assert.equal(op,"goldwrite");assert.equal(Number(args[4]),amount);amount=Number(args[5]);payload={status:"written",value:amount};}
+      else{assert.ok(["goldwrite","inventorywrite"].includes(op));assert.equal(Number(args[4]),amount);amount=Number(args[5]);payload={status:"written",value:amount};}
       queueMicrotask(()=>send({...identity,type:"rpc",requestId:Number(id),payload}));
     });
     driver=createWolfDriver({resourceDirectory:root,spawnProcess:(_exe,args)=>{
       identity={sessionId:args[2],nonce:args[3],protocolVersion:1,pid:123};
-      queueMicrotask(()=>{send({type:"spawned",pid:123});send({...identity,type:"hello",databaseProtocol:1,goldWriteProtocol:1});});return child;
+          queueMicrotask(()=>{send({type:"spawned",pid:123});send({...identity,type:"hello",databaseProtocol:1,goldWriteProtocol:1,inventoryWriteProtocol:1});});return child;
     }});
     await driver.launch({game:{gamePath:"Game.exe"},sessionId:"write-session",emit:e=>events.push(e)});await tick();
     assert.equal(events.find(e=>e.type==="connected").goldWritable,true);
@@ -40,6 +40,8 @@ test("authenticated driver routes bound gold writes and blocks write through bro
     await driver.setGold(9000,{value:8500,source:{kind:1,table:0,row:0,field:0}});
     assert.equal(amount,9000);assert.equal(events.at(-1).gold.value,9000);
     assert.equal(commands.filter(op=>op==="goldwrite").length,1);
+    await driver.setInventoryCount({kind:1,table:7,row:3,field:0},9000,2);
+    assert.equal(amount,2);assert.equal(commands.filter(op=>op==="inventorywrite").length,1);
     send({type:"exited"});await assert.rejects(driver.setGold(1,{value:9000,source:{kind:1,table:0,row:0,field:0}}),/未就绪/);
   }finally{await driver?.dispose();fs.rmSync(root,{recursive:true,force:true});}
 });

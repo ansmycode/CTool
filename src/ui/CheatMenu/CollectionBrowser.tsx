@@ -7,10 +7,14 @@ export default function CollectionBrowser({
   access,
   group,
   active,
+  writeEnabled,
+  refreshToken,
 }: {
   access: GameCollectionAccess;
   group: GameCollection;
   active: boolean;
+  writeEnabled: boolean;
+  refreshToken: number;
 }) {
   const [rows, setRows] = useState<Row[]>([]),
     [error, setError] = useState("");
@@ -20,7 +24,6 @@ export default function CollectionBrowser({
   useEffect(() => {
     if (!active) return;
     let disposed = false;
-    let timer: ReturnType<typeof setTimeout>;
     const load = async () => {
       setLoading(true);
       try {
@@ -44,20 +47,13 @@ export default function CollectionBrowser({
           setRows([]);
           setError(String(e instanceof Error ? e.message : e));
         }
-      } finally {
-        if (!disposed) {
-          setLoading(false);
-          setProgress("");
-          timer = setTimeout(load, 5000);
-        }
-      }
+      } finally {if (!disposed) {setLoading(false);setProgress("");}}
     };
     void load();
     return () => {
       disposed = true;
-      clearTimeout(timer);
     };
-  }, [access, group.key, active, revision]);
+  }, [access, group.key, active, revision, refreshToken]);
   const tableRows = useMemo(
     () =>
       rows.map((row) => ({
@@ -66,19 +62,31 @@ export default function CollectionBrowser({
         description: row.description,
         playerHasCount: row.owned,
         countError: row.ownedReason,
+        countWritable: row.writable,
       })),
     [rows],
   );
+  const changeCount = async (id: number, value: number) => {
+    const row = rows.find((item) => item.id === id);
+    if (!writeEnabled || !row || row.owned === undefined || !row.writable || !row.inventoryTarget) return;
+    try {
+      await access.setCount(row.inventoryTarget, row.owned, value);
+      setRevision((current) => current + 1);
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
   return (
     <div className="wolf-collection-page">
       <InventoryTable
         rows={tableRows}
+        onChangeCount={group.writable && writeEnabled ? changeCount : undefined}
         showId={false}
         showDescription
         emptyText={loading ? "正在读取资料…" : "没有匹配条目"}
         toolbar={
           <Space className="wolf-collection-toolbar" wrap>
-            <Typography.Text type="secondary">数量只读</Typography.Text>
+            <Typography.Text type="secondary">{group.writable && writeEnabled ? "可修改已分配的数量槽" : "数量只读"}</Typography.Text>
             <Button
               size="small"
               loading={loading}

@@ -31,7 +31,9 @@ declare global {
       getGameSession: () => Promise<GameSessionSnapshot | null>;
       readGameDatabase:(sessionId:string,request:import("@/game/database").DatabaseRequest)=>Promise<import("@/game/database").DatabaseResult>;
       selectGameGoldSource:(sessionId:string,target:import("@/game/database").DatabaseCellRef|null)=>Promise<void>;
+      refreshGameTelemetry:(sessionId:string)=>Promise<void>;
       setGameGold:(sessionId:string,value:number,expectation:import("@/game/database").GoldWriteExpectation)=>Promise<void>;
+      setGameInventoryCount:(sessionId:string,target:import("@/game/database").DatabaseCellRef,expected:number,value:number)=>Promise<void>;
       onGameSessionChanged: (callback: (snapshot: GameSessionSnapshot) => void) => () => void;
       applyFilters: (args: { gameInfo: any }) => Promise<void>;
       saveTranslateFile: (args: {

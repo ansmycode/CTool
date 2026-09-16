@@ -28,7 +28,7 @@ export default function DatabaseBrowser({
     setPage(undefined);
     setError("");
     setLoading(true);
-    void (async () => {
+    const load = async () => {
       try {
         const all: DatabaseTable[] = [];
         for (let offset = 0; offset < 4096; ) {
@@ -48,11 +48,15 @@ export default function DatabaseBrowser({
         }
         if (!disposed) setTables(all);
       } catch (e) {
-        if (!disposed) setError(e instanceof Error ? e.message : String(e));
+        if (!disposed) {
+          const error = e instanceof Error ? e.message : String(e);
+          setError(error);
+        }
       } finally {
         if (!disposed) setLoading(false);
       }
-    })();
+    };
+    void load();
     return () => {
       disposed = true;
     };

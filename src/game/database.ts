@@ -55,6 +55,7 @@ export interface GameCollection {
   label: string;
   total: number;
   inventoryStatus: string;
+  writable?: boolean;
 }
 export interface GameCollectionAccess {
   list(): Promise<GameCollection[]>;
@@ -69,8 +70,11 @@ export interface GameCollectionAccess {
       description: string;
       owned?: number;
       ownedReason?: string;
+      writable?: boolean;
+      inventoryTarget?: DatabaseCellRef;
     }[];
   }>;
+  setCount(target: DatabaseCellRef, expected: number, value: number): Promise<void>;
 }
 export interface GoldCandidate extends DatabaseCellRef {
   label: string;

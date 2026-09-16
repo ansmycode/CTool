@@ -28,6 +28,10 @@ interface GameProps {
 
 const SHORTCUT_STORAGE_KEY = "ctool:shortcut-bindings:v1";
 const SHORTCUT_ENABLED_STORAGE_KEY = "ctool:shortcuts-enabled:v1";
+const isDatabaseStartingError = (error: unknown) =>
+  /database_not_ready|数据库尚未初始化/.test(
+    String(error instanceof Error ? error.message : error),
+  );
 
 function loadShortcutBindings(): ShortcutBindings {
   try {
@@ -42,11 +46,18 @@ function loadShortcutsEnabled(): boolean {
   return localStorage.getItem(SHORTCUT_ENABLED_STORAGE_KEY) !== "false";
 }
 
-const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo, session }) => {
+const CheatMenu: React.FC<GameProps> = ({ gameInfo, session }) => {
   const [activeKey, setActiveKey] = useState(session.databaseReadOnly?"runtime":"1");
   const [collectionGroups,setCollectionGroups]=useState<GameCollection[]>([]);
   const [collectionError,setCollectionError]=useState("");
+  const [collectionRefresh,setCollectionRefresh]=useState(0);
+  const [collectionInitialization,setCollectionInitialization]=useState<{sessionId?:string;state:"loading"|"ready"|"failed"}>({state:"loading"});
   const gameReady = session.state === "ready" || !!session.databaseReadOnly;
+  const wolfCollectionInitializing =
+    session.game?.engine === "wolf" &&
+    !!session.databaseReadOnly &&
+    (collectionInitialization.sessionId !== session.sessionId ||
+      collectionInitialization.state === "loading");
   const [shortcutBindings, setShortcutBindings] =
     useState<ShortcutBindings>(loadShortcutBindings);
   const [shortcutRegistrationResults, setShortcutRegistrationResults] =
@@ -79,14 +90,32 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo, session }) =
   } = useGameFeatures(gameInfo.engine, session.sessionId, session.capabilities);
 
   useEffect(()=>{
-    let active=true;setCollectionGroups([]);setCollectionError("");
-    if(collections)void collections.list().then(groups=>{if(active)setCollectionGroups(groups);})
-      .catch(e=>{if(active)setCollectionError(String(e.message||e));});
-    return()=>{active=false;};
-  },[collections]);
-
-  console.log("游戏启动" + isGameStarting);
-  console.log("游戏初始化" + gameReady);
+    if(!collections||!session.databaseReadOnly)return;
+    let active=true;
+    let timer:ReturnType<typeof setTimeout>;
+    setCollectionGroups([]);setCollectionError("");
+    setCollectionInitialization({sessionId:session.sessionId,state:"loading"});
+    const load=async()=>{
+      try{
+        const groups=await collections.list();
+        if(active){
+          setCollectionGroups(groups);setCollectionError("");
+          setCollectionInitialization({sessionId:session.sessionId,state:"ready"});
+          void window.electronAPI.refreshGameTelemetry(session.sessionId);
+        }
+      }catch(error){
+        if(!active)return;
+        if(isDatabaseStartingError(error)){
+          timer=setTimeout(load,500);
+        } else {
+          setCollectionError(String(error instanceof Error?error.message:error));
+          setCollectionInitialization({sessionId:session.sessionId,state:"failed"});
+        }
+      }
+    };
+    void load();
+    return()=>{active=false;clearTimeout(timer);};
+  },[collections,session.databaseReadOnly,session.sessionId]);
 
   const getFeatureDataWithNotify = useCallback(async (
     feature: GameFeatureKey,
@@ -119,7 +148,9 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo, session }) =
   const refreshActiveFeature = useCallback(() => {
     const feature = getTabFeatureKey(activeKey);
     if (feature) void getFeatureDataWithNotify(feature).catch(()=>{});
-  }, [activeKey, getFeatureDataWithNotify]);
+    if(activeKey.startsWith("collection:"))setCollectionRefresh(current=>current+1);
+    if(session.databaseReadOnly&&session.sessionId)void window.electronAPI.refreshGameTelemetry(session.sessionId);
+  }, [activeKey, getFeatureDataWithNotify, session.databaseReadOnly, session.sessionId]);
 
   useEffect(() => {
     if (!gameReady) return;
@@ -253,7 +284,7 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo, session }) =
   const menuList = createCheatMenuTabs(capabilities, {
     runtime:database&&session.databaseReadOnly?<RuntimeConsole session={session} access={database} onWrite={setRuntimeGold} />:undefined,
     collections:collections?collectionGroups.map(group=>({key:`collection:${group.key}`,label:group.label,
-      children:<CollectionBrowser access={collections} group={group} active={activeKey===`collection:${group.key}`} />})):undefined,
+      children:<CollectionBrowser access={collections} group={group} active={activeKey===`collection:${group.key}`} writeEnabled={!!session.inventoryWritable} refreshToken={collectionRefresh} />})):undefined,
     database:database&&DatabaseBrowser?<React.Suspense fallback={null}><div className="runtime-page"><DatabaseBrowser access={database} /></div></React.Suspense>:undefined,
     gameInfo,
     modifyGold,
@@ -280,7 +311,10 @@ const CheatMenu: React.FC<GameProps> = ({ isGameStarting, gameInfo, session }) =
     <div className="cheat-menu">
       {contextHolder}
       {collectionError&&<div className="wolf-collection-error">物品识别失败：{collectionError}（重新连接游戏后重试）</div>}
-      <LoadingOverlay visible={!gameReady} />
+      <LoadingOverlay
+        visible={!gameReady || wolfCollectionInitializing}
+        text={session.game?.engine === "wolf" ? "正在初始化游戏数据库与物品资料…" : "游戏初始化中…"}
+      />
       <GameFeatureProvider
         features={features}
         refresh={getFeatureDataWithNotify}

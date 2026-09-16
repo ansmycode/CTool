@@ -56,7 +56,9 @@ export function registerIpcHandlers({
   ipcMain.handle("game:snapshot", () => gameSessionService.snapshot());
   ipcMain.handle("game:database-read", (_event,sessionId,request)=>gameSessionService.readDatabase(sessionId,request));
   ipcMain.handle("game:gold-source", (_event,sessionId,target)=>gameSessionService.selectGoldSource(sessionId,target));
+  ipcMain.handle("game:telemetry-refresh", (_event,sessionId)=>gameSessionService.refreshTelemetry(sessionId));
   ipcMain.handle("game:gold-write", (_event,sessionId,value,expectation)=>gameSessionService.setGold(sessionId,value,expectation));
+  ipcMain.handle("game:inventory-write", (_event,sessionId,target,expected,value)=>gameSessionService.setInventoryCount(sessionId,target,expected,value));
 
   ipcMain.handle("apply-filters", async (_event, { gameInfo }) => {
     return extractGameText(gameInfo);

@@ -105,7 +105,9 @@ export function discoverCollections(userTables, variableTables) {
               rows: candidates[0].rowCount,
             }
           : undefined,
-      writable: false,
+      // Only the confirmed base system may opt into a write protocol. A matching
+      // table name alone is never enough to enable UI editing.
+      writable: candidates.length === 1 && basicParty && tag.scope === "",
     });
   }
   return result;
