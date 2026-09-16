@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Button, InputNumber, Switch, Tooltip, Typography } from "antd";
 import { useGameFeature } from "@/game/GameFeatureContext";
 import "./index.css";
-import GoldEditor from "../GoldEditor";
 
 interface Props {
   handleAchieveVictory: () => void;
@@ -78,13 +77,30 @@ const Home: React.FC<Props> = ({
         <div className="tool-section-heading">
           <div>
             <Typography.Title level={4}>常用数据</Typography.Title>
-            <Typography.Text type="secondary">金币点击应用；速度设置离开输入框后应用</Typography.Text>
+            <Typography.Text type="secondary">修改后离开输入框即可应用</Typography.Text>
           </div>
         </div>
         <div className="home-value-grid">
           <div className="home-value-card">
             <div className="home-value-content">
-              <GoldEditor value={rpgGameData?.gold} onApply={amount=>modifyGold(amount)} />
+              <Typography.Text>持有金币</Typography.Text>
+              <InputNumber
+                className="home-value-input"
+                min={0}
+                precision={0}
+                stringMode={false}
+                step={1}
+                value={data?.gold || 0}
+                onChange={(value: number | null) => {
+                  if (value !== null) {
+                    setData((prev) => (prev ? { ...prev, gold: value } : prev));
+                  }
+                }}
+                onBlur={(event) => {
+                  const value = Number(event.target.value);
+                  if (Number.isFinite(value)) void modifyGold(value);
+                }}
+              />
             </div>
           </div>
 

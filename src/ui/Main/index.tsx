@@ -149,7 +149,7 @@ const Main: React.FC = () => {
         {session?.state === "failed" && !isGameStarting && <Alert type="error" showIcon message={session.message} />}
         <Suspense fallback={pageFallback}>
           {isGameStarting ? (
-            session?.game && ((session.state === "ready" && session.capabilities.length > 0)||session.databaseReadOnly) ? (
+            session?.game ? (
               <CheatMenu key={session.sessionId} isGameStarting={true} gameInfo={session.game} session={session} />
             ) : (
               <section className="launch-page">

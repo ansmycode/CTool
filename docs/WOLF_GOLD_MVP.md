@@ -22,9 +22,9 @@ Wolf 基本系统有金币/道具/装备的数据设计，但作者可修改或�
 
 ## 统一修改器与金币写入
 
-Wolf 进入现有 CheatMenu 标签页框架，展示游戏控制台、游戏数据库；不伪造完整 overview 或开放未适配的快捷键。GoldEditor 在 MV/MZ 主页和 Wolf 控制台共用，金币都改为点击“应用到游戏”提交，不再失焦自动提交。
+Wolf 使用独立的 `WolfCheatMenu` 标签页，展示游戏控制台、游戏数据库；不伪造完整 overview 或开放未适配的快捷键。Wolf 的 `WolfGoldEditor` 点击“应用到游戏”提交；MV/MZ 保持原有主页金币输入和失焦提交行为，两者不再共享控件或交互逻辑。
 
-写入链路：GoldEditor → GameEngineAdapter.setGameGold → preload/IPC → 当前会话 → goldMonitor.write → goldwrite RPC → DLL。
+写入链路：WolfGoldEditor → GameEngineAdapter.setGameGold → preload/IPC → 当前会话 → goldMonitor.write → goldwrite RPC → DLL。
 
 - DLL hello 的 goldWriteProtocol=1 单独协商写入能力，旧 DLL 仍只读。
 - 主进程只允许当前选中的金币来源，并核对用户编辑开始时的旧值；浏览接口拒绝写操作。
@@ -73,4 +73,4 @@ GamePro.exe 版本资源 3.595.2025.503，x86。可变数据库 99 张表；type
 - src/electron/wolf/databaseProtocol.js：边界与请求关联。
 - src/electron/wolf/databaseSemantics.js、goldMonitor.js：语义与按焦点刷新。
 - src/game/database.ts、src/game/adapters/wolf.ts：统一只读接口。
-- src/ui/Main/DatabaseBrowser.tsx、GoldReadout.tsx：浏览与显示。
+- src/ui/Main/DatabaseBrowser.tsx、src/ui/CheatMenu/WolfGoldReadout.tsx：浏览与显示。

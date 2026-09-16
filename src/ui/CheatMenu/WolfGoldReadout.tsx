@@ -1,10 +1,10 @@
 import type { GameSessionSnapshot } from "@/types/GameSession";
 import type { GameDatabaseAccess } from "@/game/database";
 import { Button, Select, Space, message } from "antd";
-import GoldEditor from "@/ui/CheatMenu/GoldEditor";
+import WolfGoldEditor from "./WolfGoldEditor";
 import type { GoldWriteExpectation } from "@/game/database";
 
-export default function GoldReadout({
+export default function WolfGoldReadout({
   gold,
   access,
   onWrite,
@@ -19,7 +19,7 @@ export default function GoldReadout({
       <h3>金币</h3>
       {gold.status === "available" ? (
         <>
-          <GoldEditor
+          <WolfGoldEditor
             key={JSON.stringify(
               gold.source && [
                 gold.source.kind,
@@ -36,7 +36,7 @@ export default function GoldReadout({
             }}
           />
           <p>
-            更新于 {new Date(gold.observedAt).toLocaleTimeString()} · 每秒采集
+            更新于 {new Date(gold.observedAt).toLocaleTimeString()} · 切回工具时同步
           </p>
           {gold.source && (
             <p>

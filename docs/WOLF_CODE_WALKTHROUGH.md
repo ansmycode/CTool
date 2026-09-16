@@ -26,7 +26,7 @@
 | `src/electron/wolf/databaseSemantics.js`、`goldMonitor.js` | 如何判定金币、按焦点刷新及受控写入？ |
 | `src/engine/wolf/databaseMapping.js`：`discoverCollections` | 如何发现不同游戏的定义表和库存表？ |
 | `src/game/adapters/wolfCollections.ts` | 如何用定义和背包合并出一页数据？ |
-| `src/ui/CheatMenu/CollectionBrowser.tsx`、`InventoryTable.tsx` | 如何完整加载、刷新和显示？ |
+| `src/ui/CheatMenu/WolfCheatMenu.tsx`、`WolfBaseFeaturesPage.tsx`、`CollectionBrowser.tsx`、`WolfInventoryTable.tsx` | 如何初始化、完整加载、刷新和显示？ |
 
 ## 3. 点击启动之后发生了什么
 
@@ -154,7 +154,7 @@ bootstrap 约每 100ms 检查一次输入，每轮至多处理 4 帧，约每秒
 
 hello 后 driver 启用 RPC 并启动 `goldMonitor`。未绑定时分批读可变数据库目录，`identifyGold` 要求单行表、数字货币字段；强候选还要求队伍表名及至少四个数字成员字段，并排除历史/存档类表。唯一强候选才自动绑定。不是仅看到“所持金”三个字就写，也不是直接用 MY 的表号。
 
-绑定后读取目标单元格，成功经 `telemetry.gold` 更新会话 revision，再通过会话事件进入 `GoldReadout/GoldEditor`。首次连接、CTool 获得焦点、手动切换来源及金币写入确认后才发起读取；没有后台秒级轮询。这不是金币变化事件 Hook，而是按用户回到工具时同步一次。
+绑定后读取目标单元格，成功经 `telemetry.gold` 更新会话 revision，再通过会话事件进入 Wolf 专用的 `WolfGoldReadout/WolfGoldEditor`。首次连接、CTool 获得焦点、手动切换来源及金币写入确认后才发起读取；没有后台秒级轮询。这不是金币变化事件 Hook，而是按用户回到工具时同步一次。
 
 ### 5.3 库存：渲染层按需拉取
 
@@ -171,14 +171,14 @@ hello 后 driver 启用 RPC 并启动 `goldMonitor`。未绑定时分批读可�
 
 MY 的咖啡 ID 56、奶茶 ID 57、巧克力 ID 68 与数量 1/1/3 是已有样本证据，不是规则里的常量；资料表 2、库存表 7 同样不能成为跨游戏硬编码。
 
-`CollectionBrowser` 连续拉完一个分类的所有批次后一次更新 rows，使用共用 InventoryTable 虚拟滚动展示；首次打开、CTool 获得焦点或点击刷新时才重新读取。虚拟滚动只减少 DOM 数量，并不意味着只读可见行。
+`WolfCheatMenu` 独立维护 DLL 初始化遮罩、焦点刷新与动态标签；它不进入 MV/MZ 的 tab registry。`CollectionBrowser` 连续拉完一个分类的所有批次后一次更新 rows，使用 WolfInventoryTable 虚拟滚动展示；首次打开、CTool 获得焦点或点击刷新时才重新读取。虚拟滚动只减少 DOM 数量，并不意味着只读可见行。
 
 首次启动是唯一例外：DLL 握手完成不代表 Wolf 已构造运行时数据库。Wolf 页面会先显示加载遮罩，并只在这一段以 500ms 间隔重试 `collections.list()`；目录和分类成功读出后才解除遮罩，同时刷新一次金币。进入正常使用后不会保留后台轮询，后续只在 CTool 获得焦点、手动刷新或写入成功后同步，避免覆盖正在编辑的数值。
 
 ## 6. 已有金币修改：一笔写入的完整过程
 
 ```text
-GoldEditor 显式应用（新值 + 编辑时旧值/来源）
+WolfGoldEditor 显式应用（新值 + 编辑时旧值/来源）
 → Wolf adapter.setGameGold
 → preload.setGameGold → game:gold-write
 → gameSessionService.setGold → wolfDriver.setGold
@@ -224,7 +224,7 @@ GoldEditor 显式应用（新值 + 编辑时旧值/来源）
 ### 8.2 已实现的写入链路
 
 ```text
-InventoryTable 数量输入（仅可写行）
+WolfInventoryTable 数量输入（仅可写行）
 → CollectionBrowser / wolfCollections.setCount
 → preload → game:inventory-write → gameSessionService
 → wolfDriver.inventorywrite RPC → DLL writeGold 的受限数字槽写入
@@ -247,7 +247,7 @@ InventoryTable 数量输入（仅可写行）
 | 新 `src/electron/wolf/inventoryService.js` | 管理会话映射、写入串行化、expected 校验、回读及失败分类 |
 | databaseProtocol / injector commands / DLL bootstrap | 新增独立库存写命令和版本能力；继续禁止通用 database-read IPC 接收写操作 |
 | database_reader.h 或独立 writer | 提取受限已有数字槽解析；不得借 goldwrite 名义绕过库存校验，不自行扩容 |
-| CollectionBrowser / InventoryTable | Wolf 使用显式提交与逐行可写判定；保留 MV/MZ 默认失焦提交和既有上限 |
+| CollectionBrowser / WolfInventoryTable | Wolf 使用显式提交与逐行可写判定；MV/MZ 的 InventoryTable 保留默认失焦提交和既有上限 |
 
 主进程可复用纯映射规则，但当前映射是在 renderer 侧做的，**并不存在可以直接信任的主进程库存绑定缓存**；新增写服务必须补上这层。也不应照搬共用表格默认的 99 为 Wolf 全游戏数量上限。
 
