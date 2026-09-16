@@ -12,6 +12,7 @@ export interface InventoryTableRow {
   playerHasCount?: number;
   description?: string;
   countError?: string;
+  countWritable?: boolean;
 }
 interface Props {
   rows: InventoryTableRow[] | null;
@@ -65,7 +66,7 @@ export default function InventoryTable({
               <span style={{ color: "#8c8c8c" }}>未知 ⓘ</span>
             </Tooltip>
           );
-        if (!onChangeCount) return count;
+        if (!onChangeCount || record.countWritable === false) return count;
         return (
           <InputNumber
             max={maxCount}

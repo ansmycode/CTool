@@ -12,6 +12,7 @@ export interface DetectedGame {
 }
 export interface GameSessionSnapshot {
   goldWritable?: boolean;
+  inventoryWritable?: boolean;
   databaseReadOnly?: boolean;
   telemetry?: {
     gold: ({ status: "available"; value: number; observedAt: number;source?:import("@/game/database").GoldCandidate&{mode:string} }

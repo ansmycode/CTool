@@ -16,6 +16,6 @@ export function createWolfAdapter(sessionId?:string):GameEngineAdapter {
   return {...wolfAdapter,sessionId,setGameGold:async(value,expectation)=>{
     if(!sessionId||!expectation)throw new Error("金币来源未就绪");
     await window.electronAPI.setGameGold(sessionId,value,expectation);
-  },database,collections:database?createWolfCollections(database):undefined};
+  },database,collections:database?createWolfCollections(database,(target,expected,value)=>window.electronAPI.setGameInventoryCount(sessionId!,target,expected,value)):undefined};
 }
 export default wolfAdapter;

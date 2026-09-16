@@ -6,7 +6,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getGameSession: () => ipcRenderer.invoke("game:snapshot"),
   readGameDatabase:(sessionId,request)=>ipcRenderer.invoke("game:database-read",sessionId,request),
   selectGameGoldSource:(sessionId,target)=>ipcRenderer.invoke("game:gold-source",sessionId,target),
+  refreshGameTelemetry:(sessionId)=>ipcRenderer.invoke("game:telemetry-refresh",sessionId),
   setGameGold:(sessionId,value,expectation)=>ipcRenderer.invoke("game:gold-write",sessionId,value,expectation),
+  setGameInventoryCount:(sessionId,target,expected,value)=>ipcRenderer.invoke("game:inventory-write",sessionId,target,expected,value),
   onGameSessionChanged: (callback) => {
     const listener = (_event, snapshot) => callback(snapshot);
     ipcRenderer.on("game-session-changed", listener);

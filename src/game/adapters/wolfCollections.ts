@@ -1,13 +1,17 @@
 import {discoverCollections} from "@/engine/wolf/databaseMapping.js";
-import type {GameCollectionAccess,GameDatabaseAccess,DatabaseTable} from "@/game/database";
+import type {GameCollectionAccess,GameDatabaseAccess,DatabaseTable,DatabaseCellRef} from "@/game/database";
 
-export function createWolfCollections(access:GameDatabaseAccess):GameCollectionAccess {
+export function createWolfCollections(access:GameDatabaseAccess,writeCount?:(target:DatabaseCellRef,expected:number,value:number)=>Promise<void>):GameCollectionAccess {
   let mappings:ReturnType<typeof discoverCollections>=[];
   async function catalog(kind:number){
     const tables:DatabaseTable[]=[];
     for(let start=0;start<4096;){
       const result=await access.read({operation:"catalog",kind,start,limit:8});
-      if(result.status!=="available"||!("tables" in result))throw new Error("数据库尚未初始化，请进入地图后重试");
+      if(result.status!=="available"){
+        if(result.reason==="database_not_ready")throw new Error("数据库尚未初始化，请进入地图后重试");
+        throw new Error(`数据库目录不可读：${result.reason}`);
+      }
+      if(!("tables" in result))throw new Error("数据库目录响应无效");
       tables.push(...result.tables);start+=result.tables.length;
       if(start>=result.total)return tables;
       if(!result.tables.length)throw new Error("数据库目录不完整");
@@ -19,7 +23,7 @@ export function createWolfCollections(access:GameDatabaseAccess):GameCollectionA
       mappings=[];
       const user=await catalog(0),variable=await catalog(1);
       mappings=discoverCollections(user,variable);
-      return mappings.map(({key,label,total,inventoryStatus})=>({key,label,total,inventoryStatus}));
+      return mappings.map(({key,label,total,inventoryStatus,writable})=>({key,label,total,inventoryStatus,writable}));
     },
     async page(key,start){
       const mapping=mappings.find(m=>m.key===key);
@@ -36,12 +40,13 @@ export function createWolfCollections(access:GameDatabaseAccess):GameCollectionA
       const unreadable=new Set<number>();
       let ownedReason="库存映射尚未确认";
       let inventoryRead=false;
+      let runtimeTotal:number|undefined;
       const stock=mapping.inventoryCandidate;
       if(mapping.inventoryStatus==="basic-system-readonly"&&stock){
         // Initial metadata can be shorter than the runtime inventory after automatic expansion.
         const probe=await access.read({operation:"page",kind:1,table:stock.table,start:0,limit:1,fieldStart:stock.field,fieldLimit:1});
         const valid=(result:typeof probe)=>result.status==="available"&&"rows" in result&&result.name===stock.name&&result.fields[0]?.type==="number"&&result.fields[0]?.name===stock.fieldName;
-        const runtimeTotal=valid(probe)&&"total" in probe?probe.total:undefined;
+        runtimeTotal=valid(probe)&&"total" in probe?probe.total:undefined;
         ownedReason="库存读取失败或结构已变化";
         inventoryRead=runtimeTotal!==undefined&&start>=runtimeTotal;
         const result=runtimeTotal!==undefined&&start<runtimeTotal?await access.read({operation:"page",kind:1,table:stock.table,start,limit:10,fieldStart:stock.field,fieldLimit:1}):undefined;
@@ -58,8 +63,19 @@ export function createWolfCollections(access:GameDatabaseAccess):GameCollectionA
         // Keep actual record ids; filtering empty/separator entries must never renumber them.
         if(typeof name!=="string"||!name.trim()||/^[-─━\s]+$/.test(name))return [];
         const count=owned.get(row.id)??(inventoryRead&&!unreadable.has(row.id)?0:undefined);
-        return [{id:row.id,name,description:typeof description==="string"?description:"",owned:count,ownedReason:count!==undefined?undefined:unreadable.has(row.id)?"库存值不可读":ownedReason}];
+        const canWrite=!!(mapping.writable&&stock&&inventoryRead&&runtimeTotal!==undefined&&row.id<runtimeTotal&&!unreadable.has(row.id));
+        return [{id:row.id,name,description:typeof description==="string"?description:"",owned:count,ownedReason:count!==undefined?undefined:unreadable.has(row.id)?"库存值不可读":ownedReason,
+          // A displayed zero beyond runtimeTotal is intentionally read-only: it
+          // has no backing numeric slot yet.
+          writable:canWrite,
+          inventoryTarget: canWrite
+            ? {kind:1,table:stock.table,row:row.id,field:stock.field} : undefined}];
       })};
+    },
+    async setCount(target,expected,value){
+      if(!Number.isInteger(expected)||expected<0||!Number.isInteger(value)||value<0||value>2147483647)throw new Error("数量必须是非负整数");
+      if(!writeCount)throw new Error("背包数量修改未就绪");
+      await writeCount(target,expected,value);
     },
   };
 }

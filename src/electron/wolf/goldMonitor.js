@@ -30,10 +30,14 @@ export function createGoldMonitor(request,emit) {
       // Keep current schema labels visible; do not persist addresses or assume an EXE-specific slot.
       emit({status:"available",value,observedAt:Date.now(),source:{...selected,mode:source},candidates});
     }catch(e){if(!stopped&&token===generation)unavailable(e.message);}
-    finally{if(!stopped&&token===generation)timer=setTimeout(cycle,selected?1000:5000);timer?.unref?.();}
+    finally{/* Refreshes are explicitly requested when CTool regains focus. */}
   }
   return {
     start(){stopped=false;void cycle();},
+    refresh(){
+      if(stopped||writing)return;
+      generation++;clearTimeout(timer);void cycle();
+    },
     select(target){
       if(writing)throw new Error("正在修改金币，请稍后切换来源");
       if(target!==null&&(!target||!Number.isInteger(target.kind)||target.kind<0||target.kind>2||
@@ -63,7 +67,7 @@ export function createGoldMonitor(request,emit) {
       }catch(error){
         if(submitted)throw new Error(`${error.message}；请求已发出，请先核对游戏金额，未确认前不要重复提交`);
         throw error;
-      }finally{writing=false;if(!stopped&&token===generation){timer=setTimeout(cycle,0);timer.unref?.();}}
+      }finally{writing=false;if(!stopped&&token===generation)void cycle();}
     },
     stop(){stopped=true;generation++;clearTimeout(timer);},
   };
