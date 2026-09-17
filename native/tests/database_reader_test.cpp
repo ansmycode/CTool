@@ -33,13 +33,12 @@ int main(){
   auto catalog=reader.catalog(1,0,8);check(catalog.find("\"rowCount\":1,\"fieldCount\":7")!=std::string::npos,"record/field vector regression");
   auto page=reader.page(1,0,0,10,0,16);check(page.find("5000,12,-1")!=std::string::npos,"initial value");
   check(page.find("quote\\\" slash\\\\ newline\\u000a")!=std::string::npos,"string field and JSON escaping");
-  check(reader.writeGold(1,0,0,0,5000,9500).find("\"status\":\"written\"")!=std::string::npos,"write acknowledged");
+  check(reader.writeNumber(1,0,0,0,5000,9500).find("\"status\":\"written\"")!=std::string::npos,"write acknowledged");
   check(numbers[0]==9500,"native gold memory changed");
-  bool denied=false;try{reader.writeGold(1,0,0,0,5000,123);}catch(const std::exception& e){denied=std::string(e.what())=="gold_value_conflict";}
+  bool denied=false;try{reader.writeNumber(1,0,0,0,5000,123);}catch(const std::exception& e){denied=std::string(e.what())=="number_value_conflict";}
   check(denied&&numbers[0]==9500,"stale value cannot overwrite game");
-  for(auto kind:{0u,2u}){denied=false;try{reader.writeGold(kind,0,0,0,9500,100);}catch(const std::exception&){denied=true;}check(denied,"definition/system writes forbidden");}
-  denied=false;try{reader.writeGold(1,0,0,6,9500,100);}catch(const std::exception&){denied=true;}check(denied,"string writes forbidden");
-  denied=false;try{reader.writeGold(1,0,0,0,9500,-1);}catch(const std::exception&){denied=true;}check(denied,"negative gold forbidden");
+  denied=false;try{reader.writeNumber(1,0,0,6,9500,100);}catch(const std::exception&){denied=true;}check(denied,"string writes forbidden");
+  denied=false;try{reader.writeNumber(1,0,0,0,9500,-1);}catch(const std::exception&){denied=true;}check(denied,"negative quantity forbidden");
   check(reader.page(1,0,0,1,0,1).find("[9500]")!=std::string::npos,"live value");
   check(reader.page(1,0,0,1,6,1).find("\"id\":6,\"name\":\"Note\"")!=std::string::npos,"field pagination");
   record[0]=1;check(reader.page(1,0,0,1,0,1).find("[null]")!=std::string::npos,"invalid cell is null not zero");

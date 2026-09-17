@@ -10,12 +10,12 @@ test("mapping uses structure and names, not MY ids or field order",()=>{
     const d=definition(id);d.fields.reverse();
     const [m]=discoverCollections([d],[stock(id+1),party]);
     assert.equal(m.definition.table,id);assert.equal(m.definition.nameField,0);
-    assert.equal(m.inventoryCandidate.table,id+1);assert.equal(m.inventoryStatus,"basic-system-readonly");assert.equal(m.writable,true);
+    assert.equal(m.quantityBinding.table,id+1);assert.equal(m.quantityBinding.kind,1);assert.equal(m.inventoryStatus,"basic-system");assert.equal(m.writable,true);
   }
 });
 test("independent namespaces cannot cross-link inventories",()=>{
   const list=discoverCollections([definition(2),definition(76,"【RPG】アイテム")],[stock(7),stock(96,"【RPG】┣所持アイテム個数"),party]);
-  assert.equal(list[0].inventoryCandidate.table,7);assert.equal(list[1].inventoryCandidate.table,96);
+  assert.equal(list[0].quantityBinding.table,7);assert.equal(list[1].quantityBinding.table,96);
   assert.equal(list[1].inventoryStatus,"candidate");
   assert.equal(discoverCollections([definition(76,"【RPG】アイテム")],[stock(7),party])[0].inventoryStatus,"unsupported");
 });
@@ -29,7 +29,13 @@ test("duplicate, wrong-type and auxiliary schemas never yield confident inventor
 test("translated labels and separate equipment types are optional capabilities",()=>{
   const d={...definition(51,"Items"),fields:[field(8,"Description"),field(4,"Name")]};
   const s={...stock(9,"ItemInventory",1),fields:[field(3,"Quantity","number")]};
-  const m=discoverCollections([d],[s,party])[0];assert.equal(m.definition.nameField,4);assert.equal(m.inventoryCandidate.rows,1);
+  const m=discoverCollections([d],[s,party])[0];assert.equal(m.definition.nameField,4);assert.equal(m.quantityBinding.rowCount,1);
   const e={...definition(88,"Equipment"),fields:[field(0,"EquipmentName")]};
   assert.equal(discoverCollections([e],[])[0].category,"equipment");
+});
+test("inline quantity fields are bound without relying on a fixed table id",()=>{
+  const d=definition(93);d.fields.push(field(8,"所持個数","number"));
+  const [m]=discoverCollections([d],[party]);
+  assert.equal(m.inventoryStatus,"basic-system");assert.equal(m.writable,true);
+  assert.deepEqual(m.quantityBinding,{kind:0,table:93,tableName:"アイテム",field:8,fieldName:"所持個数",rowCount:130,source:"inline"});
 });

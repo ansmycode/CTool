@@ -74,11 +74,12 @@ static DWORD WINAPI bootstrap(void*) {
           payload=reader.page(static_cast<uint32_t>(kind),static_cast<uint32_t>(t),static_cast<uint32_t>(start),static_cast<uint32_t>(limit),static_cast<uint32_t>(fs),static_cast<uint32_t>(fl));
         }else if(op=="goldwrite"||op=="inventorywrite"){
           int64_t expected=0,value=0;
-          if(!(input>>kind>>t>>start>>fs>>expected>>value)||input>>extra||kind!=1||t>=4096||start>=100000||fs>=4096||
+          if(!(input>>kind>>t>>start>>fs>>expected>>value)||input>>extra||kind>2||t>=4096||start>=100000||fs>=4096||
              expected<INT32_MIN||expected>INT32_MAX||value<0||value>INT32_MAX)throw std::runtime_error("invalid_request");
-          // This only resolves an existing number cell. Whether it is gold or
-          // a verified inventory quantity is decided by the host mapping.
-          payload=reader.writeGold(static_cast<uint32_t>(kind),static_cast<uint32_t>(t),static_cast<uint32_t>(start),static_cast<uint32_t>(fs),static_cast<int32_t>(expected),static_cast<int32_t>(value));
+          if(op=="goldwrite"&&kind!=1)throw std::runtime_error("invalid_request");
+          // This only resolves an existing numeric record. The host maps a
+          // semantic item identity to this coordinate immediately before use.
+          payload=reader.writeNumber(static_cast<uint32_t>(kind),static_cast<uint32_t>(t),static_cast<uint32_t>(start),static_cast<uint32_t>(fs),static_cast<int32_t>(expected),static_cast<int32_t>(value));
         }else throw std::runtime_error("unknown_operation");
       } catch(const std::exception& e){payload="{\"status\":\"unavailable\",\"reason\":"+wolf::quote(e.what())+"}";}
       if(!sendFrame(pipe,"{"+base+",\"type\":\"rpc\",\"requestId\":"+std::to_string(id)+",\"payload\":"+payload+"}")){alive=false;break;}

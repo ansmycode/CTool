@@ -164,8 +164,8 @@ hello 后 driver 启用 RPC 并启动 `goldMonitor`。未绑定时分批读可�
 
 - 表名/字段别名和字段类型识别道具、武器、防具、合并装备。
 - 通过【RPG】等前缀划分命名空间，定义表和持有表只能同组关联。
-- 唯一定义表、唯一名称字段；库存候选必须为符合持有数量约定的单数字字段表。
-- 当前只对存在基本系统队伍证据的无前缀分组启用 `basic-system-readonly`。其他分组可能只展示定义或保留候选；此证据仍是启发式规则，不是引擎强类型保证。
+- 唯一定义表、唯一名称字段；数量绑定可来自同记录 ID 的独立“所持个数”数字表，也可来自定义表内唯一的数量字段。
+- 当前只对存在基本系统队伍证据的无前缀分组启用 `basic-system`。两种数量来源同时存在或字段不唯一时保持只读；此证据仍是启发式规则，不是引擎强类型保证。
 
 `wolfCollections.page(key,start)` 按 10 行读名称、说明；再探测库存实时总行数，按相同记录 ID 读对应数量。过滤空名/分隔行后不能重新编号。成功读取且不存在持有行才补显示 0；null、截断、读取失败或未确认映射保持未知。
 
@@ -182,7 +182,7 @@ WolfGoldEditor 显式应用（新值 + 编辑时旧值/来源）
 → Wolf adapter.setGameGold
 → preload.setGameGold → game:gold-write
 → gameSessionService.setGold → wolfDriver.setGold
-→ goldMonitor.write → RPC goldwrite → DLL reader.writeGold
+→ goldMonitor.write → RPC goldwrite → DLL reader.writeNumber
 → 原生回读结果 → telemetry → UI，并刷新当前分类一次
 ```
 
@@ -190,7 +190,7 @@ WolfGoldEditor 显式应用（新值 + 编辑时旧值/来源）
 
 旧值不同则冲突，不覆盖游戏新数值；CAS 成功后重新解析数据库回读，不直接把请求值当结果返回。写后不一致属于“结果未确认”，不能自动重试，也不意味着已经撤销写入。
 
-注意两层边界：主进程确认“这是当前绑定金币”；原生 writeGold 只知道“可变库的某个数字单元格”，它并不理解金币含义。现有原生函数也没有与游戏主线程协作：CAS 只使一个整数的比较交换原子化，无法阻止校验后发生向量迁移、地址复用或多字段业务变化。不要将这套保护表述成完整事务保证。
+注意两层边界：主进程确认“这是当前绑定金币”；原生 `writeNumber` 只知道“一个已存在的数字单元格”，它并不理解金币含义。现有原生函数也没有与游戏主线程协作：CAS 只使一个整数的比较交换原子化，无法阻止校验后发生向量迁移、地址复用或多字段业务变化。不要将这套保护表述成完整事务保证。
 
 修改发生在运行内存，不直接修改存档；游戏以后如何保存由游戏流程决定。
 
@@ -226,71 +226,70 @@ WolfGoldEditor 显式应用（新值 + 编辑时旧值/来源）
 ```text
 WolfInventoryTable 数量输入（仅可写行）
 → CollectionBrowser / wolfCollections.setCount
-→ preload → game:inventory-write → gameSessionService
-→ wolfDriver.inventorywrite RPC → DLL writeGold 的受限数字槽写入
+→ preload（collectionKey + itemId）→ game:inventory-write → gameSessionService
+→ wolfDriver 重新读取目录、解析 quantityBinding → inventorywrite RPC
+→ DLL writeNumber 的受限数字槽写入
 → 回读确认 → CollectionBrowser 刷新该分类
 ```
 
-`inventorywrite` 是独立协议，仍限制在可变数据库、已存在记录、数字字段、非负 int32 与预期旧值一致。DLL 当前复用同一受限数字槽写入实现；主机映射决定这是经过确认的背包数量。缺行和未确认映射不会出现输入框。
+`inventorywrite` 是独立协议，仍限制在主进程重新确认的数量 binding、已存在记录、数字字段、非负 int32 与预期旧值一致。渲染层不携带 kind/table/field；即使开发者工具伪造原始坐标也会被拒绝。DLL 的 `writeNumber` 支持三类 Wolf 数据库的已存在数字记录，但普通 UI 只能通过已确认的道具/武器/防具 binding 调用。缺行和未确认映射不会出现输入框。
 
-### 8.3 后续需要扩展的文件
+### 8.3 MTool 已证明的写入模型
 
-以下接口名是提案，不是已存在的 API：
+证据范围更正：以下结论仅针对已分析的 `setDbVal` 调用路径，不代表 MTool 产品的全部物品添加能力。尚未排除其他命令、调用前准备或游戏自身初始化会建立数量记录；也未证明 CTool 当前看到的短表就是 MTool 最终使用的目标。不能由单条路径的边界检查推出“MTool 不能修改所有已注册物品”。本次表内数量字段规则是 CTool 的新增启发式规则，仅有合成测试，不是从 MTool 恢复出的语义规则或真实游戏验收结论。
 
-| 层 | 计划变更 |
+`agent_work/wolf_analysis` 中的 MTool 静态证据已证明：其 DLL 接收 WebSocket `setDbVal` / `setCheatData`，把每一项解析为 `[dbKind, typeIndex, dataIndex, fieldIndex, value]`，再调用 `FUN_10029160 → FUN_10029010`。后者逐层校验三套数据库、类型、数据记录与字段边界，构造 Wolf 使用的值对象，并交给容器 setter `FUN_10009e70`。
+
+`FUN_10029010` 明确在调用 setter 前检查 `dataIndex < recordCount`，所以它不会替“物理上不存在的运行时记录”自动扩容。`genItemsJson` 遍历三套数据库的类型、每个类型的数据记录和字段；这说明 MTool 的通用能力是动态五元定位与对既有记录赋值，而非把 MY 的表号写死。CTool 现在采用同一模型：映射先导出 `quantityBinding`，UI 只给出分类和物品 ID，主进程实时重建 binding 后才写入。
+
+这并不等于任何名称相似的数字字段都能写。静态分析尚未给出每个游戏“道具/武器/防具 → 五元坐标”的语义规则；它给出的结论是应先建立该规则，而不是盲目手工扩容 `Vector`。
+
+### 8.4 当前实现与余下边界
+
+| 阶段 | 落地内容 |
 | --- | --- |
-| `src/game/database.ts` | 行数据增加库存存在性、可写状态/原因；collections 增加可选 setCount；读能力与写能力分离 |
-| `databaseMapping.js` | 为规则增加 ruleId、关联策略及写入验证状态；不要把 readonly 规则自动升级可写 |
-| `wolfCollections.ts` / `wolf.ts` | 传 collectionKey、原始 itemId、旧数量、新数量和映射版本，不传任意内存地址 |
-| preload / global.d.ts / IPC handlers | 新建专用 `setGameCollectionCount` 与 `game:collection-count-write`，同步参数类型 |
-| gameSessionService / wolfDriver | 校验会话、写协议；在主进程重新发现/验证映射，不能信任渲染层给的 table/field |
-| 新 `src/electron/wolf/inventoryService.js` | 管理会话映射、写入串行化、expected 校验、回读及失败分类 |
-| databaseProtocol / injector commands / DLL bootstrap | 新增独立库存写命令和版本能力；继续禁止通用 database-read IPC 接收写操作 |
-| database_reader.h 或独立 writer | 提取受限已有数字槽解析；不得借 goldwrite 名义绕过库存校验，不自行扩容 |
-| CollectionBrowser / WolfInventoryTable | Wolf 使用显式提交与逐行可写判定；MV/MZ 的 InventoryTable 保留默认失焦提交和既有上限 |
+| 已完成：语义映射 | `databaseMapping.js` 输出 `definition + quantityBinding`，支持独立数量表与定义表内数量字段两种布局，拒绝歧义。 |
+| 已完成：受限写入 | UI 只提交 `collectionKey + itemId + expectedCount + desiredCount`；主进程重新发现 binding 后才下发 `inventorywrite`。渲染层不能提交内存地址或任意表字段。 |
+| 已完成：原生写入 | DLL 对三类数据库的既有数字记录执行 CAS + 回读；业务含义仍由主进程 binding 限制。 |
+| 待验收 | 在不同 Wolf 游戏中验证未持有道具、武器、防具的 0→N、N→0、保存、读档、菜单刷新与冲突处理。 |
+| 尚未支持 | 当目标布局真的没有该运行时记录时，MTool 的 `setDbVal` 也会因记录边界检查拒绝。此时必须另行研究游戏内部“新增背包记录”的引擎函数，不能伪造/扩容内存 Vector。 |
 
-主进程可复用纯映射规则，但当前映射是在 renderer 侧做的，**并不存在可以直接信任的主进程库存绑定缓存**；新增写服务必须补上这层。也不应照搬共用表格默认的 99 为 Wolf 全游戏数量上限。
+不能将数据库浏览接口变成任意写入口；任何新增“创建背包记录”能力也必须是新的、经版本验证的专用协议。
 
-建议请求形状（伪代码）：
+实际请求形状：
 
 ```ts
-setCount({ sessionId, collectionKey, itemId,
-  expectedCount, desiredCount, mappingRevision })
-// 由主进程重新验证后得到受限目标，渲染层不能自行授权目标地址。
-// 成功返回 observedCount；失败区分 conflict / unsupported /
-// missing-record / changed / unconfirmed，不能一律显示“失败未修改”。
+setGameInventoryCount(sessionId, { collectionKey, itemId }, expectedCount, desiredCount)
+// 主进程依据当前数据库重新解析 binding，拒绝未确认或已消失记录。
+// 原生返回回读值；旧值冲突、字段缺失和写后不一致均不会自动重试。
 ```
 
-### 8.4 已有行：可复用什么，缺什么
+### 8.5 需要修改的层与隔离边界
 
-可复用金币的数值范围检查、重新解析指针、预期旧值比较、CAS 与回读，但这只是底层机械操作。还要验证唯一库存关系、真实定义 ID、数量上限与游戏对库存的业务处理。
+| 层 | 当前职责 |
+| --- | --- |
+| `src/game/database.ts` | UI 行使用 `InventoryRecordRef`（分类键 + 物品 ID），不暴露原始地址。 |
+| `databaseMapping.js` / `wolfCollections.ts` | 生成 `quantityBinding` 并按同记录 ID 合并数量；支持独立表和表内数量字段。 |
+| preload / global.d.ts / IPC handlers | `game:inventory-write` 只接收语义记录引用。 |
+| gameSessionService / wolfDriver | 校验会话；写前重读用户库/可变库并重建 binding，不信任 renderer。 |
+| `databaseProtocol` / DLL | `inventorywrite` 支持三类数据库的既有数字记录；数据库浏览继续只读。 |
+| `database_reader.h` | `writeNumber` 重新解析记录和字段、CAS 写入并回读；不执行未经验证的 Vector 扩容。 |
+| CollectionBrowser / WolfInventoryTable | 只有 binding 已确认且记录实际存在时开放显式提交；MV/MZ 的 `InventoryTable`、HTTP 插件与全部页签不改。 |
 
-若先做已有行实验，应明确标成有限的后台单值写，不能宣称解决读档并发；默认不开启未验证规则。更可靠的扩展路线是找到游戏主线程的安全调度位置，把写任务排到那里，或调用已验证的引擎/基本系统库存操作函数。目前这些入口、调用约定、对象参数和线程边界都尚未确定，不能在方案里编造函数地址。
+### 8.6 样本验证证据
 
-### 8.5 缺少行：不能直接写零值所在位置
+对同一件“注册但未持有”的测试道具、武器、防具执行两组对照：
 
-当 itemId 大于等于运行时库存行数时，不存在数字槽。不能通过 `begin + itemId * stride` 越界写，也不能只抬高 Vector.end：记录构造、名称 Vector、字符串/数字子数组、分配器和扩容可能需要一起更新。
-
-阶段一应禁用该行修改并说明“尚未分配库存记录”；这不改变显示 0 的规则。阶段二研究游戏正常获得该物品的流程，确认它怎样扩容或调用数据库 setter，再通过游戏自身机制创建。没有明确机制前，不自行创建 C++ 容器对象。
-
-### 8.6 人工逆向需要交付什么证据
-
-对自己准备的测试游戏，由开发者操作游戏，工具先只读记录：
-
-1. 找一个已有物品，记录定义 ID、持有表、字段、当前值；在游戏里正常消费/获得一次，看哪个值变化。
-2. 在调试器对**本次解析的数量地址**设写入观察，记录执行模块+RVA、指令、调用栈、寄存器、线程；读档后地址可能变化，不能永久使用旧地址。
-3. 在安全备份的测试进度里正常获得一个此前没有库存行的物品，对照前后 rowCount、records 与子数组指针，观察扩容发生在哪里。
-4. 分别观察数量归零、重新获得、装备穿上/卸下、存档读取后的行为。确认物品 ID 参数、数量参数、上限和返回值，区分引擎通用 setter 与游戏公共事件逻辑。
-5. 在第二个结构相同但表号不同的游戏复核；保留模式周围反汇编与布局证据，不仅记录一个绝对地址。
-
-这些证据才能决定是“已有数字槽写入规则”还是“游戏线程中的库存 API 调用”。只靠一次改值成功不足以启用跨游戏写功能。
+1. 在 MTool 中设为 1，保存 MTool 发送的五元坐标或其 `genItemsJson` 对应节点；确认游戏菜单实际出现。
+2. 在 CTool DEV 数据库页中定位同一坐标，记录字段值；验证它不是仅凭“所持个数”表的相同行号猜出的目标。
+3. 在游戏内正常获得、设为 0、重新获得并读档；确认绑定记录与字段始终稳定，观察菜单刷新。
+4. 若直接数值槽写入不能得到 MTool 的结果，再对该完整记录 setter 设写入断点，恢复容器值对象的创建/初始化语义；不提前假设需要新增整行记录。
+5. 使用第二个表号不同、命名翻译不同的 Wolf 游戏复核。特征命中或启动成功都不能代替这一行为证据。
 
 ### 8.7 验证门槛与下一步
 
-先补测试再开放 UI：重排表/字段 ID、不同行数、默认零但缺行、未知映射、数量冲突、切换会话、响应超时、只读页、无效指针、回读不同值。库存写协议必须独立测试，goldwrite 不能成为任意数据库写后门。
+映射与协议测试已覆盖：同名不同作用域、短“所持个数”表、表内数量字段、字段类型错误、数量冲突、切换会话、响应超时与回读确认。已有入口为 `tests/wolf/mapping.test.js`、`collectionAdapter.test.js`、`database.test.js`、`session.test.js`、`driver.test.js` 与 `native/tests/database_reader_test.cpp`。
 
-已有验证入口：`tests/wolf/mapping.test.js`、`collectionAdapter.test.js`、`database.test.js`、`session.test.js`、`driver.test.js`，以及 `native/tests/database_reader_test.cpp`。Node 测试验证编排/规则，不证明真实游戏 ABI；原生夹具证明构造布局下的解析/保护，不证明多游戏兼容。
-
-建议下一次开发的最小范围：**先增加行级库存存在性和诊断，不开放写入；然后用一个已有行完成“游戏操作 → 地址 → 调用栈 → 规则”的人工验证，再实现独立的受限库存写链路。** 缺行创建和角色穿戴分别排后续任务。
+下一次功能开发的最小范围是：**用第二个表号、命名翻译不同的 Wolf 游戏验证同一套 binding，并分别测试道具、武器和防具的 0→N、N→0、保存与读档。** 真正没有运行时记录的游戏保持只读，直到定位到该版本的官方背包新增函数；不将“创建背包行”作为默认实现目标。
 
 开发者完成阅读后，应能独立回答：模式 +30 存的是什么？字段 ID 为什么不直接乘 4？哪些时机读取金币？库存 0 是否有实际内存？CAS 保护了什么、没保护什么？若不能回答，应在对应层停下来验证，而不是继续叠功能。

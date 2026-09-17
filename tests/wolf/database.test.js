@@ -13,10 +13,11 @@ test("gold write protocol bounds and acknowledgement",()=>{
   assert.equal(validateDatabaseReply({status:"written",value:10000},request).value,10000);
   assert.throws(()=>validateDatabaseReply({status:"written",value:1},request));
 });
-test("inventory write protocol accepts only existing non-negative quantity targets",()=>{
+test("inventory write protocol accepts a host-resolved numeric quantity target",()=>{
   const request={operation:"inventorywrite",kind:1,table:7,row:3,field:0,expected:0,value:1};
   assert.deepEqual(validateDatabaseRequest(request),[1,7,3,0,0,1]);
-  for(const patch of [{kind:0},{expected:-1},{value:-1},{value:2147483648},{row:-1}])assert.throws(()=>validateDatabaseRequest({...request,...patch}));
+  assert.deepEqual(validateDatabaseRequest({...request,kind:0}),[0,7,3,0,0,1]);
+  for(const patch of [{kind:3},{expected:-1},{value:-1},{value:2147483648},{row:-1}])assert.throws(()=>validateDatabaseRequest({...request,...patch}));
   assert.equal(validateDatabaseReply({status:"written",value:1},request).value,1);
 });
 

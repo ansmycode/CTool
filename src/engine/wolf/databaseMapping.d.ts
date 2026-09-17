@@ -13,18 +13,20 @@ export interface WolfCollectionMapping {
     descriptionFieldName?: string;
   };
   inventoryStatus:
-    | "basic-system-readonly"
+    | "basic-system"
     | "candidate"
     | "ambiguous"
     | "unsupported";
-  inventoryCandidate?: {
+  quantityBinding?: {
+    kind: 0 | 1;
     table: number;
-    name: string;
+    tableName: string;
     field: number;
     fieldName: string;
-    rows: number;
+    rowCount: number;
+    source: "inline" | "separate";
   };
-  writable: false;
+  writable: boolean;
 }
 export function discoverCollections(
   userTables: DatabaseTable[],
