@@ -67,7 +67,7 @@ export function createWolfCollections(access:GameDatabaseAccess,writeCount?:(tar
         const canWrite=!!(mapping.writable&&stock&&inventoryRead&&runtimeTotal!==undefined&&row.id<runtimeTotal&&!unreadable.has(row.id));
         return [{id:row.id,name,description:typeof description==="string"?description:"",owned:count,ownedReason:count!==undefined?undefined:unreadable.has(row.id)?"库存值不可读":ownedReason,
           // A displayed zero without a runtime record is intentionally
-          // read-only. MTool's own setDbVal validates this same boundary.
+          // read-only: the native writer requires an existing numeric record.
           writable:canWrite,
           inventoryTarget: canWrite
             ? {collectionKey:mapping.key,itemId:row.id} : undefined}];

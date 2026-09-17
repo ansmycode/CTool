@@ -68,7 +68,7 @@ class DatabaseReader {
     IMAGE_DOS_HEADER dos{}; IMAGE_NT_HEADERS32 nt{};
     if(!get(base,dos)||dos.e_magic!=IMAGE_DOS_SIGNATURE||dos.e_lfanew<=0||dos.e_lfanew>1048576||
        !get(base+dos.e_lfanew,nt)||nt.Signature!=IMAGE_NT_SIGNATURE||nt.FileHeader.Machine!=IMAGE_FILE_MACHINE_I386||nt.FileHeader.NumberOfSections>96) return;
-    // MTool database initialization candidate. The immediate at +30 addresses the database root.
+    // Database initialization candidate. The immediate at +30 addresses the database root.
     std::vector<int> p={0x6a,1,0x51,0xb9,-1,-1,-1,-1,0xe8,-1,-1,-1,-1,0xff,0x35,-1,-1,-1,-1,0xb9,-1,-1,-1,-1};
     for(int i=0;i<9;i++) { p.push_back(0xc7);p.push_back(5);for(int j=0;j<8;j++)p.push_back(-1); }
     p.insert(p.end(),{0xe8,-1,-1,-1,-1,0xb9,-1,-1,-1,-1});
