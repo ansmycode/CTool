@@ -7,6 +7,7 @@ import { readPE } from "../../engine/wolf/detect.js";
 import { createDatabaseRpc } from "../wolf/databaseProtocol.js";
 import { createGoldMonitor } from "../wolf/goldMonitor.js";
 import { tableCategory } from "../wolf/databaseSemantics.js";
+import { discoverCollections } from "../../engine/wolf/databaseMapping.js";
 
 export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
   let child;
@@ -19,6 +20,35 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
     if(!child?.stdin.writable)throw new Error("注入器输入已关闭");
     child.stdin.write(command);
   });
+  const catalog = async (kind) => {
+    const tables=[];
+    for(let start=0;start<4096;){
+      const result=await databaseRpc.request({operation:"catalog",kind,start,limit:8});
+      if(result.status!=="available")throw new Error(`数据库目录不可读：${result.reason||"unknown"}`);
+      tables.push(...result.tables);
+      if(start+result.tables.length>=result.total)return tables;
+      if(!result.tables.length)throw new Error("数据库目录不完整");
+      start+=result.tables.length;
+    }
+    throw new Error("数据库目录超出范围");
+  };
+  const resolveInventoryRecord = async (reference) => {
+    if(!reference||typeof reference.collectionKey!=="string"||reference.collectionKey.length>256||
+       !Number.isInteger(reference.itemId)||reference.itemId<0||reference.itemId>99999)
+      throw new Error("无效背包记录");
+    // Recreate the semantic binding in the main process immediately before a
+    // write. The renderer provides an item identity only, never a raw table
+    // coordinate that could be redirected with developer tools.
+    const [userTables,variableTables]=await Promise.all([catalog(0),catalog(1)]);
+    const collection=discoverCollections(userTables,variableTables)
+      .find(item=>item.key===reference.collectionKey);
+    const binding=collection?.quantityBinding;
+    if(!collection?.writable||!binding)
+      throw new Error("背包数量映射未确认，已拒绝写入");
+    if(reference.itemId>=binding.rowCount)
+      throw new Error("该物品尚无可写的运行时数量记录");
+    return {kind:binding.kind,table:binding.table,row:reference.itemId,field:binding.field};
+  };
   return {
     async launch({ game, sessionId, emit }) {
       const exe = path.join(resourceDirectory, "inject-x86.exe");
@@ -126,8 +156,9 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
     selectGoldSource(target){if(!goldMonitor)throw new Error("数据库监测未就绪");goldMonitor.select(target);},
     refreshTelemetry(){goldMonitor?.refresh();},
     async setGold(value,expectation){if(!goldWritable||!goldMonitor)throw new Error("DLL 不支持金币修改，请更新并重启游戏");await goldMonitor.write(value,expectation);},
-    async setInventoryCount(target,expected,value){
+    async setInventoryCount(reference,expected,value){
       if(!inventoryWritable)throw new Error("DLL 不支持背包数量修改，请更新并重启游戏");
+      const target=await resolveInventoryRecord(reference);
       const result=await databaseRpc.request({operation:"inventorywrite",...target,expected,value});
       if(result.status!=="written")throw new Error(result.reason||"背包数量写入失败");
     },

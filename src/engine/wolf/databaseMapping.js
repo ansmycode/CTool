@@ -61,7 +61,7 @@ export function discoverCollections(userTables, variableTables) {
     const desc = table.fields.filter(
       (f) => f.type === "string" && descriptions.test(normalize(f.name)),
     );
-    const candidates = variableTables.filter((t) => {
+    const separateCandidates = variableTables.filter((t) => {
       const x = split(t.name);
       return (
         !t.reason &&
@@ -73,6 +73,36 @@ export function discoverCollections(userTables, variableTables) {
         counts.test(normalize(t.fields[0].name))
       );
     });
+    // Some games keep the quantity beside the item definition instead of in a
+    // second "owned count" table.  Both forms are part of the public Wolf
+    // database schema, so choose by labels and field types rather than table
+    // numbers.  Do not guess when a table has multiple possible quantity
+    // fields: an ambiguous binding stays read-only.
+    const inlineCandidates = table.fields.filter(
+      (f) => f.type === "number" && counts.test(normalize(f.name)),
+    );
+    const quantityBindings = [
+      ...separateCandidates.map((candidate) => ({
+        kind: 1,
+        table: candidate.id,
+        tableName: candidate.name,
+        field: candidate.fields[0].id,
+        fieldName: candidate.fields[0].name,
+        rowCount: candidate.rowCount,
+        source: "separate",
+      })),
+      ...inlineCandidates.map((field) => ({
+        kind: 0,
+        table: table.id,
+        tableName: table.name,
+        field: field.id,
+        fieldName: field.name,
+        rowCount: table.rowCount,
+        source: "inline",
+      })),
+    ];
+    const quantityBinding = quantityBindings.length === 1 ? quantityBindings[0] : undefined;
+    const isBasicSystem = !!basicParty && tag.scope === "";
     result.push({
       key: `${category}:${table.id}`,
       label: `${tag.scope ? tag.scope + " · " : ""}${labels[category]}`,
@@ -87,27 +117,17 @@ export function discoverCollections(userTables, variableTables) {
       },
       total: table.rowCount,
       // Schema resemblance alone does not establish row-id semantics or an active game system.
-      inventoryStatus:
-        candidates.length === 1
-          ? basicParty && tag.scope === ""
-            ? "basic-system-readonly"
-            : "candidate"
-          : candidates.length > 1
-            ? "ambiguous"
-            : "unsupported",
-      inventoryCandidate:
-        candidates.length === 1
-          ? {
-              table: candidates[0].id,
-              name: candidates[0].name,
-              field: candidates[0].fields[0].id,
-              fieldName: candidates[0].fields[0].name,
-              rows: candidates[0].rowCount,
-            }
-          : undefined,
-      // Only the confirmed base system may opt into a write protocol. A matching
-      // table name alone is never enough to enable UI editing.
-      writable: candidates.length === 1 && basicParty && tag.scope === "",
+      inventoryStatus: quantityBinding
+        ? isBasicSystem
+          ? "basic-system"
+          : "candidate"
+        : quantityBindings.length > 1
+          ? "ambiguous"
+          : "unsupported",
+      quantityBinding,
+      // Only a complete, unambiguous base-system binding opts into a write
+      // protocol. A matching label alone never enables editing.
+      writable: !!quantityBinding && isBasicSystem,
     });
   }
   return result;

@@ -21,13 +21,18 @@ test("authenticated driver routes bound gold writes and blocks write through bro
     const child=Object.assign(new EventEmitter(),{stdin:new PassThrough(),stdout:new PassThrough(),stderr:new PassThrough()});
     let identity;let amount=8500;const events=[];const commands=[];
     const fields=[{id:0,name:"所持金",type:"number"},...Array.from({length:6},(_,i)=>({id:i+1,name:`メンバー${i+1}`,type:"number"}))];
+    const itemFields=[{id:0,name:"アイテム名",type:"string"},{id:1,name:"説明文",type:"string"}];
+    const countFields=[{id:0,name:"所持個数",type:"number"}];
     const send=m=>child.stdout.write(JSON.stringify(m)+"\n");
     child.stdin.on("data",chunk=>{
       const [op,id,...args]=String(chunk).trim().split(" ");if(op==="detach")return;commands.push(op);
       let payload;
-          if(op==="catalog")payload={status:"available",kind:1,total:1,tables:[{id:0,name:"パーティー情報",rowCount:1,fieldCount:7,fields}]};
-      else if(op==="page")payload={status:"available",kind:1,table:0,name:"パーティー情報",total:1,fieldCount:7,fields:[fields[0]],rows:[{id:0,name:"Main",values:[amount]}]};
-      else{assert.ok(["goldwrite","inventorywrite"].includes(op));assert.equal(Number(args[4]),amount);amount=Number(args[5]);payload={status:"written",value:amount};}
+      if(op==="catalog"){
+        const kind=Number(args[0]);
+        payload=kind===0?{status:"available",kind,total:3,tables:Array.from({length:3},(_,id)=>id===2?{id,name:"アイテム",rowCount:10,fieldCount:2,fields:itemFields}:{id,name:`unused-${id}`,rowCount:0,fieldCount:0,fields:[]})}:
+          {status:"available",kind,total:8,tables:Array.from({length:8},(_,id)=>id===6?{id,name:"パーティー情報",rowCount:1,fieldCount:7,fields}:id===7?{id,name:"┣所持アイテム個数",rowCount:10,fieldCount:1,fields:countFields}:{id,name:`unused-${id}`,rowCount:0,fieldCount:0,fields:[]})};
+      } else if(op==="page")payload={status:"available",kind:1,table:Number(args[1]),name:"パーティー情報",total:1,fieldCount:7,fields:[fields[0]],rows:[{id:0,name:"Main",values:[amount]}]};
+      else{assert.ok(["goldwrite","inventorywrite"].includes(op));amount=Number(args[5]);payload={status:"written",value:amount};}
       queueMicrotask(()=>send({...identity,type:"rpc",requestId:Number(id),payload}));
     });
     driver=createWolfDriver({resourceDirectory:root,spawnProcess:(_exe,args)=>{
@@ -37,12 +42,13 @@ test("authenticated driver routes bound gold writes and blocks write through bro
     await driver.launch({game:{gamePath:"Game.exe"},sessionId:"write-session",emit:e=>events.push(e)});await tick();
     assert.equal(events.find(e=>e.type==="connected").goldWritable,true);
     await assert.rejects(driver.readDatabase({operation:"goldwrite"}),/仅允许读取/);
-    await driver.setGold(9000,{value:8500,source:{kind:1,table:0,row:0,field:0}});
+    await driver.setGold(9000,{value:8500,source:{kind:1,table:6,row:0,field:0}});
     assert.equal(amount,9000);assert.equal(events.at(-1).gold.value,9000);
     assert.equal(commands.filter(op=>op==="goldwrite").length,1);
-    await driver.setInventoryCount({kind:1,table:7,row:3,field:0},9000,2);
+    await assert.rejects(driver.setInventoryCount({kind:1,table:7,row:3,field:0},9000,2),/无效背包记录/);
+    await driver.setInventoryCount({collectionKey:"items:2",itemId:3},9000,2);
     assert.equal(amount,2);assert.equal(commands.filter(op=>op==="inventorywrite").length,1);
-    send({type:"exited"});await assert.rejects(driver.setGold(1,{value:9000,source:{kind:1,table:0,row:0,field:0}}),/未就绪/);
+    send({type:"exited"});await assert.rejects(driver.setGold(1,{value:9000,source:{kind:1,table:6,row:0,field:0}}),/未就绪/);
   }finally{await driver?.dispose();fs.rmSync(root,{recursive:true,force:true});}
 });
 test("Wolf detection allows new x86 EXEs without a hash allowlist but rejects x64 and DLL", () => {

@@ -46,6 +46,13 @@ export interface DatabaseCellRef {
   row: number;
   field: number;
 }
+// Renderer-visible inventory identity. The Electron main process resolves this
+// against the current Wolf database immediately before a write; raw database
+// coordinates never cross the renderer-to-main write boundary.
+export interface InventoryRecordRef {
+  collectionKey: string;
+  itemId: number;
+}
 export interface GoldWriteExpectation {
   value: number;
   source: DatabaseCellRef;
@@ -71,10 +78,10 @@ export interface GameCollectionAccess {
       owned?: number;
       ownedReason?: string;
       writable?: boolean;
-      inventoryTarget?: DatabaseCellRef;
+      inventoryTarget?: InventoryRecordRef;
     }[];
   }>;
-  setCount(target: DatabaseCellRef, expected: number, value: number): Promise<void>;
+  setCount(target: InventoryRecordRef, expected: number, value: number): Promise<void>;
 }
 export interface GoldCandidate extends DatabaseCellRef {
   label: string;

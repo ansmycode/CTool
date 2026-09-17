@@ -4,7 +4,10 @@ export function validateDatabaseRequest(request) {
   if(!request||!integer(request.kind,0,2))throw new Error("无效数据库类型");
   if(request.operation==="goldwrite"&&request.kind===1&&integer(request.table,0,4095)&&integer(request.row,0,99999)&&integer(request.field,0,4095)&&integer(request.expected,-2147483648,2147483647)&&integer(request.value,0,2147483647))
     return [request.kind,request.table,request.row,request.field,request.expected,request.value];
-  if(request.operation==="inventorywrite"&&request.kind===1&&integer(request.table,0,4095)&&integer(request.row,0,99999)&&integer(request.field,0,4095)&&integer(request.expected,0,2147483647)&&integer(request.value,0,2147483647))
+  // MTool's setDbVal is addressed by database kind/table/record/field. The
+  // caller may use any Wolf database kind, but only the main-process semantic
+  // resolver is allowed to create this request.
+  if(request.operation==="inventorywrite"&&integer(request.table,0,4095)&&integer(request.row,0,99999)&&integer(request.field,0,4095)&&integer(request.expected,0,2147483647)&&integer(request.value,0,2147483647))
     return [request.kind,request.table,request.row,request.field,request.expected,request.value];
   if(request.operation==="catalog"&&integer(request.start,0,4096)&&integer(request.limit,1,8))
     return [request.kind,request.start,request.limit];

@@ -6,7 +6,7 @@
 #include <vector>
 #include <stdexcept>
 
-// Generic database reads plus guarded numeric gold write. Labels are interpreted by the host.
+// Generic database reads plus guarded numeric writes. Labels are interpreted by the host.
 // Resolve all pointers afresh: loading saves may replace the backing vectors.
 namespace wolf {
 // SEH is isolated from C++ objects. Never change page protection for a write.
@@ -147,27 +147,27 @@ class DatabaseReader {
     if(!get(db.address+20,a)||!get(db.address+32,b)||memcmp(&a,&db.data,sizeof(a))||memcmp(&b,&db.schema,sizeof(b)))
       throw std::runtime_error("database_changed_retry");
   }
-  std::string writeGold(uint32_t kind,uint32_t index,uint32_t row,uint32_t field,int32_t expected,int32_t value) const {
-    if(kind!=1||value<0)throw std::runtime_error("gold_write_not_allowed");
+  std::string writeNumber(uint32_t kind,uint32_t index,uint32_t row,uint32_t field,int32_t expected,int32_t value) const {
+    if(kind>2||value<0)throw std::runtime_error("number_write_not_allowed");
     const auto db=database(kind);const auto t=table(db,index);
     if(row>=t.rowCount)throw std::runtime_error("row_out_of_range");
     const auto d=descriptor(t,field);Vector values{};uint32_t count=0;
     if(d<1000||d>=2000||!vectorAt(t.records.begin+row*36,4,4096,values,count)||d-1000>=count)
-      throw std::runtime_error("gold_not_numeric");
+      throw std::runtime_error("number_not_numeric");
     const uintptr_t address=values.begin+(d-1000)*4;
     MEMORY_BASIC_INFORMATION region{};
     if(address%4||!VirtualQuery(reinterpret_cast<void*>(address),&region,sizeof(region))||region.State!=MEM_COMMIT||
-       (region.Protect&PAGE_GUARD)||!(region.Protect&(PAGE_READWRITE|PAGE_WRITECOPY)))throw std::runtime_error("gold_not_writable");
+       (region.Protect&PAGE_GUARD)||!(region.Protect&(PAGE_READWRITE|PAGE_WRITECOPY)))throw std::runtime_error("number_not_writable");
     unchanged(db);const auto latest=table(db,index);Vector current{};
     if(latest.records.begin!=t.records.begin||latest.fields.begin!=t.fields.begin||descriptor(latest,field)!=d||
        !get(t.records.begin+row*36,current)||memcmp(&values,&current,sizeof(values)))throw std::runtime_error("database_changed_retry");
     LONG previous=0;
-    if(!compareGold(address,expected,value,previous))throw std::runtime_error("gold_write_failed");
-    if(previous!=expected)throw std::runtime_error("gold_value_conflict");
+    if(!compareGold(address,expected,value,previous))throw std::runtime_error("number_write_failed");
+    if(previous!=expected)throw std::runtime_error("number_value_conflict");
     // Read through the resolved database again, rather than echoing the requested amount.
     const auto after=table(database(kind),index);
     const auto observed=cellJson(after,row,field);
-    if(observed!=std::to_string(value))throw std::runtime_error("gold_write_unconfirmed_refresh");
+    if(observed!=std::to_string(value))throw std::runtime_error("number_write_unconfirmed_refresh");
     return "{\"status\":\"written\",\"value\":"+observed+"}";
   }
   std::string catalog(uint32_t kind,uint32_t start,uint32_t limit) const {

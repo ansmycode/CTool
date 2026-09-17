@@ -1,7 +1,7 @@
 import {discoverCollections} from "@/engine/wolf/databaseMapping.js";
-import type {GameCollectionAccess,GameDatabaseAccess,DatabaseTable,DatabaseCellRef} from "@/game/database";
+import type {GameCollectionAccess,GameDatabaseAccess,DatabaseTable,InventoryRecordRef} from "@/game/database";
 
-export function createWolfCollections(access:GameDatabaseAccess,writeCount?:(target:DatabaseCellRef,expected:number,value:number)=>Promise<void>):GameCollectionAccess {
+export function createWolfCollections(access:GameDatabaseAccess,writeCount?:(target:InventoryRecordRef,expected:number,value:number)=>Promise<void>):GameCollectionAccess {
   let mappings:ReturnType<typeof discoverCollections>=[];
   async function catalog(kind:number){
     const tables:DatabaseTable[]=[];
@@ -41,15 +41,16 @@ export function createWolfCollections(access:GameDatabaseAccess,writeCount?:(tar
       let ownedReason="库存映射尚未确认";
       let inventoryRead=false;
       let runtimeTotal:number|undefined;
-      const stock=mapping.inventoryCandidate;
-      if(mapping.inventoryStatus==="basic-system-readonly"&&stock){
-        // Initial metadata can be shorter than the runtime inventory after automatic expansion.
-        const probe=await access.read({operation:"page",kind:1,table:stock.table,start:0,limit:1,fieldStart:stock.field,fieldLimit:1});
-        const valid=(result:typeof probe)=>result.status==="available"&&"rows" in result&&result.name===stock.name&&result.fields[0]?.type==="number"&&result.fields[0]?.name===stock.fieldName;
+      const stock=mapping.quantityBinding;
+      if(mapping.inventoryStatus==="basic-system"&&stock){
+        // Re-check the live count table before every category read. A save load
+        // can replace it, and its initial directory row count may be stale.
+        const probe=await access.read({operation:"page",kind:stock.kind,table:stock.table,start:0,limit:1,fieldStart:stock.field,fieldLimit:1});
+        const valid=(result:typeof probe)=>result.status==="available"&&"rows" in result&&result.name===stock.tableName&&result.fields[0]?.type==="number"&&result.fields[0]?.name===stock.fieldName;
         runtimeTotal=valid(probe)&&"total" in probe?probe.total:undefined;
         ownedReason="库存读取失败或结构已变化";
         inventoryRead=runtimeTotal!==undefined&&start>=runtimeTotal;
-        const result=runtimeTotal!==undefined&&start<runtimeTotal?await access.read({operation:"page",kind:1,table:stock.table,start,limit:10,fieldStart:stock.field,fieldLimit:1}):undefined;
+        const result=runtimeTotal!==undefined&&start<runtimeTotal?await access.read({operation:"page",kind:stock.kind,table:stock.table,start,limit:10,fieldStart:stock.field,fieldLimit:1}):undefined;
         if(result&&valid(result)&&result.status==="available"&&"rows" in result&&result.total===runtimeTotal&&
           result.rows.length===Math.min(10,result.total-start)&&result.rows.every((row,i)=>row.id===start+i)){
           inventoryRead=true;
@@ -65,11 +66,11 @@ export function createWolfCollections(access:GameDatabaseAccess,writeCount?:(tar
         const count=owned.get(row.id)??(inventoryRead&&!unreadable.has(row.id)?0:undefined);
         const canWrite=!!(mapping.writable&&stock&&inventoryRead&&runtimeTotal!==undefined&&row.id<runtimeTotal&&!unreadable.has(row.id));
         return [{id:row.id,name,description:typeof description==="string"?description:"",owned:count,ownedReason:count!==undefined?undefined:unreadable.has(row.id)?"库存值不可读":ownedReason,
-          // A displayed zero beyond runtimeTotal is intentionally read-only: it
-          // has no backing numeric slot yet.
+          // A displayed zero without a runtime record is intentionally
+          // read-only. MTool's own setDbVal validates this same boundary.
           writable:canWrite,
           inventoryTarget: canWrite
-            ? {kind:1,table:stock.table,row:row.id,field:stock.field} : undefined}];
+            ? {collectionKey:mapping.key,itemId:row.id} : undefined}];
       })};
     },
     async setCount(target,expected,value){
