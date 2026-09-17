@@ -230,13 +230,13 @@ profile 必须包含：
 | ProductName | WOLF RPG Editor |
 | SHA-256 | 795203A6E875618D7FBDC7DD1F409A445C60262C911745553D040081BEDB6AC0 |
 | 数据布局 | Data/BasicData.wolf、MapData.wolf 等封包 |
-| MTool_Game.exe_LAA_BAK | 与当前 Game.exe 的 SHA-256 相同 |
+| 样本目录中的旧 EXE 备份 | 与当前 Game.exe 的 SHA-256 相同 |
 | forceWolf3Start | 文本 true |
 | wolfVersionFixTo | 字节 E5 00；具体配置含义未核验 |
 
 FileVersion 是文件资源声明，不是已验证的内存 ABI；配置文件也不能证明游戏就是 Wolf 3。备用 EXE 与当前文件相同只能证明两者一致，不能证明是未经修改的原版。
 
-建议样本 ID：wolf-x86-2.2961-795203a6，初始状态 candidate。后续原生验证使用独立测试副本，保留现有目录作为基线；不自动删除 MTool 标记、替换 EXE 或复用未知翻译缓存。本地路径只用于开发测试，不写入产品打包或硬编码检测规则。
+建议样本 ID：wolf-x86-2.2961-795203a6，初始状态 candidate。后续原生验证使用独立测试副本，保留现有目录作为基线；不自动删除已有工具标记、替换 EXE 或复用未知翻译缓存。本地路径只用于开发测试，不写入产品打包或硬编码检测规则。
 
 首个动态验收：无工具启动基线、CTool 启动握手、标题/读档/地图/对话/菜单采集、短长译文与控制符、停止替换、退出重启、日志能力报告。作弊在只读结构稳定后再验收数值写入及读回。
 
@@ -267,9 +267,9 @@ FileVersion 是文件资源声明，不是已验证的内存 ABI；配置文件�
 LunaTranslator 和 Textractor 仓库 LICENSE 展示 GPLv3 文本：
 [LunaTranslator LICENSE](https://github.com/HIllya51/LunaTranslator/blob/main/LICENSE)、
 [Textractor LICENSE](https://github.com/Artikash/Textractor/blob/master/LICENSE)。
-CTool 当前采用 PolyForm Noncommercial；不能默认把第三方实现复制进来后继续只按现有许可证发布。实施阶段记录具体文件的许可与来源，优先根据游戏实测独立实现所需接口，不直接搬运反编译 MTool 实现。
+CTool 当前采用 PolyForm Noncommercial；不能默认把第三方实现复制进来后继续只按现有许可证发布。实施阶段记录具体文件的许可与来源，根据游戏实测实现所需接口；引入外部代码前核对许可和署名要求。
 
-本轮未找到可直接采用的“Wolf 各版本 → 完整作弊对象/翻译 ABI → 实测覆盖”公开矩阵。这不等于网上不存在；当前证据仍不足以跳过样本验证。原有 MTool 分析提供候选特征和操作流程，但反编译签名、遗漏分支、对象所有权仍须恢复。
+本轮未找到可直接采用的“Wolf 各版本 → 完整作弊对象/翻译 ABI → 实测覆盖”公开矩阵。这不等于网上不存在；当前证据仍不足以跳过样本验证。候选特征、函数签名、控制分支和对象所有权均需通过目标游戏验证。
 
 ## 11. 文件落点与迁移顺序
 
