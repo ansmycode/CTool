@@ -16,6 +16,10 @@ agent_work
 *.ctool-ai-work.json
 *.ai-translated.json
 
+# Local documentation and native build output.
+/docs/
+/native/build/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
