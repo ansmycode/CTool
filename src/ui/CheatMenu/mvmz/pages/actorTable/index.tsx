@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Table, InputNumber, Checkbox, Input, Select, Card, Form } from "antd";
 import { useGameFeature } from "@/game/GameFeatureContext";
 import type { ActorData } from "@/game/features";
-import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
+import { useTableScrollY } from "@/ui/CheatMenu/shared/hooks/useTableScrollY";
 
 interface Props {
   setActorInTeam: (ids: Array<number>) => Promise<void>;

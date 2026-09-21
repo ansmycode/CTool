@@ -1,9 +1,9 @@
-import { InputNumber, Table, Tooltip } from "antd";
+import { Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { TableSearchBar } from "./TableSearchBar";
-import { useTableDraftValues } from "./useTableDraftValues";
-import { useTableScrollY } from "./useTableScrollY";
-import { useTableSearch } from "./useTableSearch";
+import { TableSearchBar } from "../../shared/components/TableSearchBar";
+import BlurNumberInput from "../../shared/components/BlurNumberInput";
+import { useTableScrollY } from "../../shared/hooks/useTableScrollY";
+import { useTableSearch } from "../../shared/hooks/useTableSearch";
 
 export interface WolfInventoryTableRow {
   id: number;
@@ -16,7 +16,7 @@ export interface WolfInventoryTableRow {
 
 interface Props {
   rows: WolfInventoryTableRow[];
-  onChangeCount?: (id: number, value: number) => void;
+  onChangeCount?: (id: number, value: number, expected: number) => Promise<void>;
   emptyText: string;
 }
 
@@ -32,9 +32,6 @@ export default function WolfInventoryTable({
     row.name,
     row.description,
   ]);
-  const { getDraftValue, setDraftValue } = useTableDraftValues<number | null>(
-    rows,
-  );
   const columns: ColumnsType<WolfInventoryTableRow> = [
     { title: "名称", dataIndex: "name", ellipsis: true, width: 260 },
     {
@@ -50,15 +47,8 @@ export default function WolfInventoryTable({
           );
         if (!onChangeCount || !record.writable) return owned;
         return (
-          <InputNumber
-            min={0}
-            max={2147483647}
-            precision={0}
-            value={getDraftValue(record.id, owned)}
-            onChange={(value) => setDraftValue(record.id, value)}
-            onBlur={(event) => onChangeCount(record.id, Number(event.target.value))}
-            variant="borderless"
-          />
+          <BlurNumberInput label={`${record.name}持有数量`} value={owned}
+            onCommit={(value, expected) => onChangeCount(record.id, value, expected)} />
         );
       },
     },

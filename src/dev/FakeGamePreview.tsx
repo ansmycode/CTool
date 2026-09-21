@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Layout, Tabs } from "antd";
 import { GameFeatureProvider } from "@/game/GameFeatureContext";
 import type { GameCapability } from "@/game/types";
-import { createCheatMenuTabs } from "@/ui/CheatMenu/tabRegistry";
+import { createCheatMenuTabs } from "@/ui/CheatMenu/mvmz/tabRegistry";
 import { fakeGameFeatures } from "./fakeGameData";
 import "@/ui/CheatMenu/index.css";
 import "@/ui/Main/index.css";

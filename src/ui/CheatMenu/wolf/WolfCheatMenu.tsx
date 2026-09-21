@@ -1,12 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-import { Tabs } from "antd";
+import { Alert, Tabs } from "antd";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import { useGameFeatures } from "@/game/useGameFeatures";
 import type { GameCollection } from "@/game/database";
 import type { GameSessionSnapshot } from "@/types/GameSession";
-import WolfBaseFeaturesPage from "./WolfBaseFeaturesPage";
-import CollectionBrowser from "./CollectionBrowser";
-import "./index.css";
+import WolfBaseFeaturesPage from "./base/WolfBaseFeaturesPage";
+import CollectionBrowser from "./inventory/CollectionBrowser";
+import WolfVariablesPage from "./variables/WolfVariablesPage";
+import "../index.css";
 
 const DatabaseBrowser = import.meta.env.DEV
   ? lazy(() => import("@/ui/Main/DatabaseBrowser"))
@@ -31,7 +32,7 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
   const [initialization, setInitialization] = useState<
     { sessionId?: string; state: "loading" | "ready" | "failed" }
   >({ state: "loading" });
-  const { database, collections, setRuntimeGold } = useGameFeatures(
+  const { database, collections, runtime, setRuntimeGold } = useGameFeatures(
     gameInfo.engine,
     session.sessionId,
     session.capabilities,
@@ -106,11 +107,16 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
                 session={session}
                 access={database}
                 onWrite={setRuntimeGold}
+                runtime={runtime}
+                active={activeKey === "runtime"}
               />
             ),
           },
         ]
       : []),
+    ...(runtime ? [{ key: "variables", label: "数值变量", className: "tab-pane-fullheight",
+      children: <WolfVariablesPage key={session.sessionId} access={runtime} active={activeKey === "variables"} enabled={!!session.runtimeAvailable} />,
+    }] : []),
     ...groups.map((group) => ({
       key: `collection:${group.key}`,
       label: group.label,
@@ -151,9 +157,10 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
         </div>
       )}
       <LoadingOverlay
-        visible={!databaseReady || initializing}
+        visible={(!databaseReady || initializing) && !session.runtimeAvailable}
         text="正在初始化游戏数据库与物品资料…"
       />
+      {initializing && session.runtimeAvailable && <Alert type="info" message="正在加载物品资料，基础功能与数值变量可独立使用。" />}
       <Tabs
         className="cheat-menu-tabs"
         activeKey={activeKey}

@@ -1,10 +1,10 @@
 import React from "react";
 import { Input, Table } from "antd";
 import { useGameFeature } from "@/game/GameFeatureContext";
-import { TableSearchBar } from "@/ui/CheatMenu/TableSearchBar";
-import { useTableDraftValues } from "@/ui/CheatMenu/useTableDraftValues";
-import { useTableSearch } from "@/ui/CheatMenu/useTableSearch";
-import { useTableScrollY } from "@/ui/CheatMenu/useTableScrollY";
+import { TableSearchBar } from "@/ui/CheatMenu/shared/components/TableSearchBar";
+import { useTableDraftValues } from "@/ui/CheatMenu/shared/hooks/useTableDraftValues";
+import { useTableSearch } from "@/ui/CheatMenu/shared/hooks/useTableSearch";
+import { useTableScrollY } from "@/ui/CheatMenu/shared/hooks/useTableScrollY";
 
 interface Props {
   changeVariables: (id: number, value: string | number) => Promise<void>;

@@ -1,6 +1,6 @@
 import type { GameSessionSnapshot } from "@/types/GameSession";
-import MvmzCheatMenu from "./MvmzCheatMenu";
-import WolfCheatMenu from "./WolfCheatMenu";
+import MvmzCheatMenu from "./mvmz/MvmzCheatMenu";
+import WolfCheatMenu from "./wolf/WolfCheatMenu";
 
 interface CheatMenuProps {
   session: GameSessionSnapshot;

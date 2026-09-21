@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { InputNumber, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { TableSearchBar } from "./TableSearchBar";
-import { useTableSearch } from "./useTableSearch";
-import { useTableDraftValues } from "./useTableDraftValues";
-import { useTableScrollY } from "./useTableScrollY";
+import { TableSearchBar } from "../../shared/components/TableSearchBar";
+import { useTableSearch } from "../../shared/hooks/useTableSearch";
+import { useTableDraftValues } from "../../shared/hooks/useTableDraftValues";
+import { useTableScrollY } from "../../shared/hooks/useTableScrollY";
 
 export interface InventoryTableRow {
   id: number;

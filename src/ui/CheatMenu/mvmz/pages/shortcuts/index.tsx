@@ -52,7 +52,7 @@ const characterKeys: Record<string, string> = {
   "-": "-",
   "=": "=",
   ",": ",",
-  ".": ".",
+  "./index": "./index",
   "/": "/",
   ";": ";",
   "'": "'",

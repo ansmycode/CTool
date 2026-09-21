@@ -54,14 +54,16 @@ export default function CollectionBrowser({
       disposed = true;
     };
   }, [access, group.key, active, revision, refreshToken]);
-  const changeCount = async (id: number, value: number) => {
+  const changeCount = async (id: number, value: number, expected: number) => {
     const row = rows.find((item) => item.id === id);
-    if (!writeEnabled || !row || row.owned === undefined || !row.writable || !row.inventoryTarget) return;
+    if (!writeEnabled || !row || row.owned === undefined || !row.writable || !row.inventoryTarget) throw new Error("库存写入已不可用，请刷新");
     try {
-      await access.setCount(row.inventoryTarget, row.owned, value);
+      await access.setCount(row.inventoryTarget, expected, value);
+      setRows(current => current.map(item => item.id === id ? { ...item, owned: value } : item));
       setRevision((current) => current + 1);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
+      throw e;
     }
   };
   return (

@@ -12,17 +12,17 @@ import type {
 import type {
   ShortcutBindings,
   ShortcutRegistrationResults,
-} from "./shortcuts/types";
+} from "./pages/shortcuts/types";
 
-const Home = lazy(() => import("./home/index"));
-const ItemsTable = lazy(() => import("./itemsTable/index"));
-const ArmorTable = lazy(() => import("./armorTable/index"));
-const WeaponTable = lazy(() => import("./weaponTable/index"));
-const VariablesTable = lazy(() => import("./variablesTable/index"));
-const SwitchesTable = lazy(() => import("./switchesTable/index"));
-const ActorTable = lazy(() => import("./actorTable/index"));
-const TranslateTool = lazy(() => import("./translateTool/index"));
-const ShortcutSettings = lazy(() => import("./shortcuts/index"));
+const Home = lazy(() => import("./pages/home/index"));
+const ItemsTable = lazy(() => import("./pages/itemsTable/index"));
+const ArmorTable = lazy(() => import("./pages/armorTable/index"));
+const WeaponTable = lazy(() => import("./pages/weaponTable/index"));
+const VariablesTable = lazy(() => import("./pages/variablesTable/index"));
+const SwitchesTable = lazy(() => import("./pages/switchesTable/index"));
+const ActorTable = lazy(() => import("./pages/actorTable/index"));
+const TranslateTool = lazy(() => import("./pages/translateTool/index"));
+const ShortcutSettings = lazy(() => import("./pages/shortcuts/index"));
 
 interface CheatMenuContext {
   gameInfo: any;

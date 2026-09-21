@@ -2,18 +2,23 @@ import { Alert, Card, Collapse, Space, Tag, Typography } from "antd";
 import type { GameSessionSnapshot } from "@/types/GameSession";
 import type { GameDatabaseAccess, GoldWriteExpectation } from "@/game/database";
 import WolfGoldReadout from "./WolfGoldReadout";
+import WolfRuntimeControls from "./WolfRuntimeControls";
+import type { GameRuntimeAccess } from "@/game/runtime";
 
 /**
- * Wolf's extensible base-feature page. Gold is only the first verified action;
- * later speed, battle, and actor features belong here when their hooks exist.
+ * Wolf's base features: bound gold editing and independently detected runtime controls.
  */
 export default function WolfBaseFeaturesPage({
   session,
   access,
   onWrite,
+  runtime,
+  active,
 }: {
   session: GameSessionSnapshot;
   access: GameDatabaseAccess;
+  runtime?: GameRuntimeAccess;
+  active: boolean;
   onWrite?: (
     value: number,
     expectation?: GoldWriteExpectation,
@@ -49,6 +54,7 @@ export default function WolfBaseFeaturesPage({
           />
         )}
       </Card>
+      {runtime && <WolfRuntimeControls key={session.sessionId} access={runtime} active={active} enabled={!!session.runtimeAvailable} />}
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
         金币可修改；已确认且已分配的库存数量可修改。游戏菜单若未更新，请重新打开菜单。
       </Typography.Text>

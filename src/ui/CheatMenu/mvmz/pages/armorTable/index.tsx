@@ -1,5 +1,5 @@
 import {useGameFeature} from "@/game/GameFeatureContext";
-import InventoryTable from "../InventoryTable";
+import InventoryTable from "../../components/InventoryTable";
 
 interface Props {handleGainItem:(id:number,count:number,gainType:string)=>void;}
 export default function ArmorTable({handleGainItem}:Props){

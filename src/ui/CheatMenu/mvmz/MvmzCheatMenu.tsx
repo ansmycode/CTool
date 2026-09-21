@@ -11,8 +11,8 @@ import type { GameShortcutActionId } from "@/game/types";
 import type {
   ShortcutBindings,
   ShortcutRegistrationResults,
-} from "./shortcuts/types";
-import "./index.css";
+} from "./pages/shortcuts/types";
+import "../index.css";
 import type { GameSessionSnapshot } from "@/types/GameSession";
 
 interface GameProps {

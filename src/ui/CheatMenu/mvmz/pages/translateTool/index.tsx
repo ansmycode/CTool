@@ -9,8 +9,8 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import ExtractModal from "@/components/ExtractModal";
-import AITranslation from "@/ui/AITranslation";
+import ExtractModal from "@/components/ExtractModal/index";
+import AITranslation from "@/ui/AITranslation/index";
 import "./index.css";
 
 interface Props {
