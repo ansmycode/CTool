@@ -5,8 +5,10 @@ import {
   Button,
   Card,
   Col,
+  Modal,
   Form,
   Input,
+  InputNumber,
   Row,
   Select,
   Space,
@@ -18,6 +20,7 @@ import type {
   AITranslationFormValues,
 } from "@/types/AITranslation";
 import { AI_PROVIDER_PRESETS, LANGUAGE_OPTIONS } from "./providerPresets";
+import { AI_TRANSLATION_SETTING_FIELDS, DEFAULT_AI_TRANSLATION_SETTINGS, normalizeAITranslationSettings } from "@/shared/aiTranslationSettings.js";
 import "./index.css";
 
 type InteractionMessage = {
@@ -37,6 +40,7 @@ const AITranslation: React.FC = () => {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [message, setMessage] = useState<InteractionMessage>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const values = Form.useWatch([], form);
 
   const preset = useMemo(
@@ -99,7 +103,13 @@ const AITranslation: React.FC = () => {
   };
 
   const validateConfiguration = async () => {
-    await form.validateFields();
+    try {
+      await form.validateFields();
+    } catch (error) {
+      const fields = (error as { errorFields?: { name: (string | number)[]; errors: string[] }[] }).errorFields;
+      if (fields?.some(field => field.name[0] === "execution")) setAdvancedOpen(true);
+      throw new Error(fields?.[0]?.errors[0] ?? "请检查当前配置。");
+    }
     if (!selectedFile) throw new Error("请先选择原始 JSON 文件。");
   };
 
@@ -154,6 +164,8 @@ const AITranslation: React.FC = () => {
   return (
     <Card
       className="ai-translation-card"
+      extra={<Button size="small" onClick={() => setAdvancedOpen(true)}
+        disabled={isTranslating || isTestingConnection}>高级配置</Button>}
       title={
         <div className="ai-translation-title">
           <Typography.Text strong>AI 翻译配置</Typography.Text>
@@ -166,13 +178,14 @@ const AITranslation: React.FC = () => {
       <Form<AITranslationFormValues>
         form={form}
         layout="vertical"
-        disabled={isTranslating}
+        disabled={isTranslating || isTestingConnection}
         initialValues={{
           provider: "openai",
           baseUrl: AI_PROVIDER_PRESETS[0].baseUrl,
           model: AI_PROVIDER_PRESETS[0].models[0]?.value,
           sourceLanguage: "日语",
           targetLanguage: "简体中文",
+          execution: { ...DEFAULT_AI_TRANSLATION_SETTINGS },
         }}
       >
         <Form.Item label="原始 JSON" className="ai-file-field">
@@ -304,6 +317,58 @@ const AITranslation: React.FC = () => {
           </Col>
         </Row>
 
+        <Modal
+          title="翻译高级配置"
+          className="ai-advanced-modal"
+          open={advancedOpen}
+          centered
+          width={680}
+          forceRender
+          onCancel={() => setAdvancedOpen(false)}
+          footer={[
+            <Button key="reset" disabled={isTranslating || isTestingConnection}
+              onClick={() => form.resetFields(AI_TRANSLATION_SETTING_FIELDS.map(field => ["execution", field.key]))}>
+              恢复默认配置
+            </Button>,
+            <Button key="done" type="primary" onClick={async () => {
+              try {
+                await form.validateFields(AI_TRANSLATION_SETTING_FIELDS.map(field => ["execution", field.key]));
+                setAdvancedOpen(false);
+              } catch { /* Keep invalid fields visible for correction. */ }
+            }}>完成</Button>,
+          ]}
+        >
+          <Typography.Paragraph type="secondary">
+            配置仅在当前页面保留；条目数和字符上限共同决定分批大小。
+          </Typography.Paragraph>
+              <Row gutter={[16, 8]}>
+                {AI_TRANSLATION_SETTING_FIELDS.map(field => (
+                  <Col span={12} key={field.key}>
+                    <Form.Item
+                      name={["execution", field.key]}
+                      label={field.label}
+                      tooltip={field.help}
+                      rules={[{ validator: async (_, value: number | null) => {
+                        if (value == null) throw new Error(`请输入${field.label}`);
+                        normalizeAITranslationSettings({ [field.key]: value });
+                      } }]}
+                    >
+                      <InputNumber
+                        size="small"
+                        min={field.min}
+                        max={field.max}
+                        step={field.step}
+                        precision={field.precision}
+                        addonAfter={field.unit}
+                        aria-label={field.label}
+                        style={{ width: "100%" }}
+                      />
+                    </Form.Item>
+                  </Col>
+                ))}
+              </Row>
+        </Modal>
+
         {selectedFile?.hasUnfinishedWork && !message && (
           <Alert
             className="ai-interaction-message"
@@ -327,7 +392,7 @@ const AITranslation: React.FC = () => {
             className="ai-interaction-message"
             type={message.type}
             showIcon
-            message={message.text}
+            message={<Typography.Text ellipsis={{ tooltip: message.text }}>{message.text}</Typography.Text>}
           />
         )}
         {!selectedFile?.hasWorkFile && !message && (
@@ -341,7 +406,7 @@ const AITranslation: React.FC = () => {
 
         <div className="ai-translation-actions">
           <Typography.Text type="secondary">
-            {hasRequiredValues ? "配置已填写，可进行下一步。" : "请先选择文件并完成配置。"}
+            {`并发 ${values?.execution?.concurrency ?? 1} · 每批最多 ${values?.execution?.maxEntries ?? 100} 条`}
           </Typography.Text>
           <Space>
             <Button

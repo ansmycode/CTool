@@ -8,6 +8,24 @@
   overflow: hidden;
 }
 
+/* Modal content is portaled outside the card; give its fields their own spacing. */
+.ai-advanced-modal .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.ai-translation-card .ai-interaction-message {
+  padding: 4px 8px;
+}
+
+.ai-interaction-message .ant-alert-content {
+  min-width: 0;
+}
+
+.ai-interaction-message .ant-alert-message > .ant-typography {
+  display: block;
+  font-size: inherit;
+}
+
 .ai-translation-card .ant-card-head {
   min-height: 44px;
   padding-inline: 14px;

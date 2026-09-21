@@ -10,6 +10,8 @@ CTool 是一个仅面向 Windows 的 Electron 桌面工具，用于识别并启�
 
 技术栈：Electron 37、React 19、TypeScript 5、Vite 7、Ant Design 5。Electron 主进程与测试代码主要使用原生 ESM JavaScript，渲染层主要使用 TypeScript/TSX。
 
+CheatMenu 固定窗口尺寸且页面不允许整体滚动，功能块与主要操作必须在可视范围内。AI 翻译页面通过弹窗提供高级配置：并发请求数、每批条目数/字符上限、请求间隔、超时及重试次数。默认值与校验集中在 `src/shared/aiTranslationSettings.js`，随应用打包；配置经现有 startAITranslation IPC 传入 `config.execution`，仅在当前页面保留。`src/electron/ai/translator.js` 使用并发任务池和全局请求间隔，失败后停止新请求，等待在途批次保存后才结束任务；工作文件不保存 API Key 或执行配置。
+
 ## 运行架构
 
 项目有两条不要混淆的通信链路。
