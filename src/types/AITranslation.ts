@@ -28,6 +28,7 @@ export interface AITranslationFormValues {
   model: string;
   sourceLanguage: string;
   targetLanguage: string;
+  execution?: Partial<import("@/shared/aiTranslationSettings.js").AITranslationSettings>;
 }
 
 export type AITranslationAPIConfig = AITranslationFormValues;

@@ -1,7 +1,9 @@
+import { DEFAULT_AI_TRANSLATION_SETTINGS } from "../../shared/aiTranslationSettings.js";
+
 export const DEFAULT_BATCH_OPTIONS = Object.freeze({
-  maxEntries: 100,
-  maxCharacters: 12000,
-  concurrency: 1,
+  maxEntries: DEFAULT_AI_TRANSLATION_SETTINGS.maxEntries,
+  maxCharacters: DEFAULT_AI_TRANSLATION_SETTINGS.maxCharacters,
+  concurrency: DEFAULT_AI_TRANSLATION_SETTINGS.concurrency,
 });
 
 function entryCharacters(entry) {
@@ -52,17 +54,26 @@ export async function runTaskPool(tasks, worker, concurrency = 1) {
   }
   const results = new Array(tasks.length);
   let nextIndex = 0;
+  let failed = false;
+  let firstError;
 
   async function runNext() {
-    while (nextIndex < tasks.length) {
+    while (!failed && nextIndex < tasks.length) {
       const index = nextIndex;
       nextIndex += 1;
-      results[index] = await worker(tasks[index], index);
+      try {
+        results[index] = await worker(tasks[index], index);
+      } catch (error) {
+        if (!failed) firstError = error;
+        failed = true;
+      }
     }
   }
 
   await Promise.all(
     Array.from({ length: Math.min(concurrency, tasks.length) }, runNext),
   );
+  // Keep the task lock until all in-flight workers have settled.
+  if (failed) throw firstError;
   return results;
 }

@@ -13,12 +13,15 @@ import {
   runTaskPool,
 } from "../../src/electron/ai/batching.js";
 
-const mockPath = path.resolve("docs/mocks/ai-translation-ja-500.json");
-
 function createTemporarySource() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "ctool-ai-test-"));
   const sourcePath = path.join(directory, "Japanese.json");
-  fs.copyFileSync(mockPath, sourcePath);
+  fs.writeFileSync(sourcePath, JSON.stringify(Object.fromEntries(
+    Array.from({ length: 500 }, (_, index) => {
+      const text = `こんにちは、旅人 ${index}。`;
+      return [text, text];
+    }),
+  )));
   return { directory, sourcePath };
 }
 
@@ -72,7 +75,7 @@ test("全部完成后导出纯净 JSON 且保留工作文件", () => {
   const { directory, sourcePath } = createTemporarySource();
   try {
     const { workFilePath, outputFilePath } = getAITranslationPaths(sourcePath);
-    const prepared = prepareAITranslationWorkFile(sourcePath);
+    prepareAITranslationWorkFile(sourcePath);
     const workFile = JSON.parse(fs.readFileSync(workFilePath, "utf8"));
     for (const item of Object.values(workFile.items)) {
       item.value = `译文-${item.value}`;
