@@ -11,6 +11,7 @@ export interface DetectedGame {
   profileId?: string;
 }
 export interface GameSessionSnapshot {
+  runtimeAvailable?: boolean;
   goldWritable?: boolean;
   inventoryWritable?: boolean;
   databaseReadOnly?: boolean;

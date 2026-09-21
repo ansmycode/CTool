@@ -8,6 +8,7 @@ import { createDatabaseRpc } from "../wolf/databaseProtocol.js";
 import { createGoldMonitor } from "../wolf/goldMonitor.js";
 import { tableCategory } from "../wolf/databaseSemantics.js";
 import { discoverCollections } from "../../engine/wolf/databaseMapping.js";
+import { validateRuntimeRequest } from "../wolf/runtimeProtocol.js";
 
 export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
   let child;
@@ -16,6 +17,7 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
   let goldMonitor;
   let goldWritable=false;
   let inventoryWritable=false;
+  let runtimeAvailable=false;
   const databaseRpc=createDatabaseRpc(command=>{
     if(!child?.stdin.writable)throw new Error("注入器输入已关闭");
     child.stdin.write(command);
@@ -65,6 +67,7 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
         reportedFailure = true;
         clearTimeout(timer);
         goldMonitor?.stop();databaseRpc.close();
+        child?.stdin.end("detach\n"); // Revoke runtime controls in the DLL without closing the game.
         emit({ type: "error", message: error.message });
       };
       const deadline = () => {
@@ -105,8 +108,10 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
               authenticated = true;
               goldWritable=message.databaseProtocol===1&&message.goldWriteProtocol===1;
               inventoryWritable=message.databaseProtocol===1&&message.inventoryWriteProtocol===1;
-              emit({ type: "connected", capabilities: [], goldWritable, inventoryWritable, databaseReadOnly:message.databaseProtocol===1,
+              runtimeAvailable=message.runtimeProtocol===1;
+              emit({ type: "connected", capabilities: [], goldWritable, inventoryWritable, runtimeAvailable, databaseReadOnly:message.databaseProtocol===1,
                 message: message.databaseProtocol===1 ? (goldWritable?"DLL 已连接；数据库浏览与金币修改已开启":"DLL 已连接；数据库只读浏览与自动识别已开启") : "DLL 已连接；请重新编译 DLL 以使用数据库浏览" });
+              if(message.databaseProtocol===1||runtimeAvailable)databaseRpc.enable();
               if(message.databaseProtocol===1){
                 databaseRpc.enable();
                 goldMonitor=createGoldMonitor(request=>databaseRpc.request(request),gold=>emit({type:"telemetry",gold}));
@@ -152,6 +157,11 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
       if(result.status==="available"&&request.operation==="catalog")
         return {...result,tables:result.tables.map(t=>({...t,category:tableCategory(t,request.kind)}))};
       return result;
+    },
+    async runtime(request) {
+      if(!runtimeAvailable)throw new Error("DLL 不支持运行时控制，请更新原生组件并重启游戏");
+      validateRuntimeRequest(request);
+      return databaseRpc.request(request);
     },
     selectGoldSource(target){if(!goldMonitor)throw new Error("数据库监测未就绪");goldMonitor.select(target);},
     refreshTelemetry(){goldMonitor?.refresh();},

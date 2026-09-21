@@ -15,7 +15,7 @@ export function createGameSessionService({ detect, createDriver, publish, saveHi
     entry.finishing = true;
     let cleanupError;
     try { await entry.driver?.dispose(); } catch (error) { cleanupError = error.message; }
-    update(entry, { state: "closed", processState: "exited", capabilities: [], telemetry: undefined,databaseReadOnly:false,goldWritable:false,inventoryWritable:false,
+    update(entry, { state: "closed", processState: "exited", capabilities: [], telemetry: undefined,databaseReadOnly:false,goldWritable:false,inventoryWritable:false,runtimeAvailable:false,
       message: cleanupError ? "游戏已退出，但清理失败：" + cleanupError : "游戏已退出" });
     entry.finalized = true;
   };
@@ -41,12 +41,12 @@ export function createGameSessionService({ detect, createDriver, publish, saveHi
             } else if (event.type === "injected") {
               if (entry.snapshot.state === "connecting") update(entry, { state: "initializing", message: "DLL 已加载，等待握手" });
             } else if (event.type === "connected") {
-              update(entry, { state: "degraded", capabilities: [],databaseReadOnly:!!event.databaseReadOnly,goldWritable:!!event.goldWritable,inventoryWritable:!!event.inventoryWritable, message: event.message });
+              update(entry, { state: "degraded", capabilities: [],databaseReadOnly:!!event.databaseReadOnly,goldWritable:!!event.goldWritable,inventoryWritable:!!event.inventoryWritable,runtimeAvailable:!!event.runtimeAvailable, message: event.message });
             } else if (event.type === "telemetry") {
               if (entry.snapshot.state === "degraded" && entry.snapshot.processState === "running")
                 update(entry, { telemetry: { gold: event.gold } });
             } else if (event.type === "error") {
-              update(entry, { state: "failed", capabilities: [], telemetry: undefined,databaseReadOnly:false,goldWritable:false,inventoryWritable:false, message: event.message });
+              update(entry, { state: "failed", capabilities: [], telemetry: undefined,databaseReadOnly:false,goldWritable:false,inventoryWritable:false,runtimeAvailable:false, message: event.message });
             } else if (event.type === "exited") void finish(entry);
           },
         });
@@ -71,6 +71,16 @@ export function createGameSessionService({ detect, createDriver, publish, saveHi
         throw new Error("数据库会话无效或未就绪");
       const result=await entry.driver.readDatabase(request);
       if(current!==entry||entry.finalized||!entry.snapshot.databaseReadOnly)throw new Error("游戏会话已变化");
+      return result;
+    },
+    async runtime(sessionId,request) {
+      const entry=current;
+      if(!entry||entry.finalized||entry.finishing||entry.snapshot.sessionId!==sessionId||
+         entry.snapshot.game?.engine!=="wolf"||entry.snapshot.state!=="degraded"||entry.snapshot.processState!=="running"||!entry.snapshot.runtimeAvailable||!entry.driver.runtime)
+        throw new Error("Wolf 运行时会话无效或未就绪");
+      const result=await entry.driver.runtime(request);
+      if(current!==entry||entry.finalized||entry.finishing||!entry.snapshot.runtimeAvailable)
+        throw new Error("会话已变化，操作结果未确认");
       return result;
     },
     selectGoldSource(sessionId,target) {

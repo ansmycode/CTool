@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   launchGame: (exePath) => ipcRenderer.invoke("game:launch", exePath),
   getGameSession: () => ipcRenderer.invoke("game:snapshot"),
   readGameDatabase:(sessionId,request)=>ipcRenderer.invoke("game:database-read",sessionId,request),
+  wolfRuntime:(sessionId,request)=>ipcRenderer.invoke("game:wolf-runtime",sessionId,request),
   selectGameGoldSource:(sessionId,target)=>ipcRenderer.invoke("game:gold-source",sessionId,target),
   refreshGameTelemetry:(sessionId)=>ipcRenderer.invoke("game:telemetry-refresh",sessionId),
   setGameGold:(sessionId,value,expectation)=>ipcRenderer.invoke("game:gold-write",sessionId,value,expectation),

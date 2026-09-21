@@ -30,6 +30,7 @@ declare global {
       launchGame: (exePath: string) => Promise<GameSessionSnapshot>;
       getGameSession: () => Promise<GameSessionSnapshot | null>;
       readGameDatabase:(sessionId:string,request:import("@/game/database").DatabaseRequest)=>Promise<import("@/game/database").DatabaseResult>;
+      wolfRuntime:(sessionId:string,request:import("@/game/runtime").WolfRuntimeRequest)=>Promise<import("@/game/runtime").WolfRuntimeResult>;
       selectGameGoldSource:(sessionId:string,target:import("@/game/database").DatabaseCellRef|null)=>Promise<void>;
       refreshGameTelemetry:(sessionId:string)=>Promise<void>;
       setGameGold:(sessionId:string,value:number,expectation:import("@/game/database").GoldWriteExpectation)=>Promise<void>;

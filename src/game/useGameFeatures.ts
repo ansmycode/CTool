@@ -141,6 +141,7 @@ export function useGameFeatures(
 
   return {
     database: adapter.database,
+    runtime: adapter.runtime,
     collections: adapter.collections,
     setRuntimeGold: adapter.setGameGold,
     features,

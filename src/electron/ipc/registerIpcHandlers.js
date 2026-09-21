@@ -55,6 +55,7 @@ export function registerIpcHandlers({
   ipcMain.handle("game:launch", async (_event, exePath) => gameSessionService.launch(exePath));
   ipcMain.handle("game:snapshot", () => gameSessionService.snapshot());
   ipcMain.handle("game:database-read", (_event,sessionId,request)=>gameSessionService.readDatabase(sessionId,request));
+  ipcMain.handle("game:wolf-runtime", (_event,sessionId,request)=>gameSessionService.runtime(sessionId,request));
   ipcMain.handle("game:gold-source", (_event,sessionId,target)=>gameSessionService.selectGoldSource(sessionId,target));
   ipcMain.handle("game:telemetry-refresh", (_event,sessionId)=>gameSessionService.refreshTelemetry(sessionId));
   ipcMain.handle("game:gold-write", (_event,sessionId,value,expectation)=>gameSessionService.setGold(sessionId,value,expectation));

@@ -14,6 +14,39 @@ function pe(dll=false) {
 }
 const tick = () => new Promise(resolve=>setImmediate(resolve));
 
+test("runtime handshake enables only semantic commands and detaches on protocol failure",async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"ctool-runtime-driver-"));let driver;
+  try {
+    fs.writeFileSync(path.join(root,"inject-x86.exe"),pe());fs.writeFileSync(path.join(root,"ctool-wolf-x86.dll"),pe(true));
+    const child=Object.assign(new EventEmitter(),{stdin:new PassThrough(),stdout:new PassThrough(),stderr:new PassThrough()});
+    let identity;const commands=[],events=[];
+    const send=m=>child.stdout.write(JSON.stringify(m)+"\n");
+    child.stdin.on("data",chunk=>{
+      const text=String(chunk).trim();commands.push(text);
+      const [op,id,...args]=text.split(" ");if(op==="detach")return;
+      const payload=op==="varpage"?{status:"available",group:2,total:1,rows:[{id:0,value:-3}]}:
+        {status:"written",value:op==="noclip"?args[0]==="1":Number(args.at(-1))};
+      queueMicrotask(()=>send({...identity,type:"rpc",requestId:Number(id),payload}));
+    });
+    driver=createWolfDriver({resourceDirectory:root,spawnProcess:(_exe,args)=>{
+      identity={sessionId:args[2],nonce:args[3],protocolVersion:1,pid:123};
+      queueMicrotask(()=>{send({type:"spawned",pid:123});send({...identity,type:"hello",runtimeProtocol:1});});return child;
+    }});
+    await driver.launch({game:{gamePath:"Game.exe"},sessionId:"runtime",emit:e=>events.push(e)});
+    assert.equal(events.find(e=>e.type==="connected").runtimeAvailable,true);
+    await assert.rejects(driver.runtime({operation:"inventorywrite",kind:1}),/无效/);
+    await assert.rejects(driver.readDatabase({operation:"varwrite"}),/仅允许读取/);
+    assert.equal((await driver.runtime({operation:"varpage",group:2,start:0,limit:10})).rows[0].value,-3);
+    assert.equal((await driver.runtime({operation:"varwrite",group:2,index:0,expected:-3,value:-4})).value,-4);
+    assert.equal((await driver.runtime({operation:"speed",value:2})).value,2);
+    assert.equal((await driver.runtime({operation:"noclip",value:true})).value,true);
+    send({...identity,type:"heartbeat",nonce:"wrong"});await tick();
+    assert.ok(commands.includes("detach"));
+    await assert.rejects(driver.runtime({operation:"speed",value:1}),/未就绪/);
+    assert.ok(events.some(e=>e.type==="error"));assert.ok(!events.some(e=>e.type==="exited"));
+  }finally{await driver?.dispose();fs.rmSync(root,{recursive:true,force:true});}
+});
+
 test("authenticated driver routes bound gold writes and blocks write through browse API",async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"ctool-write-driver-"));let driver;
   try{

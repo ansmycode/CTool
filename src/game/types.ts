@@ -26,6 +26,7 @@ export interface GameShortcutPolicy {
 }
 
 export interface GameEngineAdapter {
+  readonly runtime?: import("./runtime").GameRuntimeAccess;
   readonly collections?:import("./database").GameCollectionAccess;
   readonly database?: import("./database").GameDatabaseAccess;
   readonly sessionId?: string;
