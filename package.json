@@ -19,6 +19,7 @@
     "dist": "npm run build && npm run build:native && electron-builder --win",
     "build:native": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-native.ps1",
     "test:wolf": "node --test tests/wolf/*.test.js",
+    "test:native:unit": "node scripts/test-native-unit.mjs",
     "test:native": "node scripts/smoke-wolf.mjs"
   },
   "dependencies": {
@@ -93,7 +94,8 @@
         "to": "native/wolf/x86",
         "filter": [
           "inject-x86.exe",
-          "ctool-wolf-x86.dll"
+          "ctool-wolf-x86.dll",
+          "MinHook-LICENSE.txt"
         ]
       }
     ],

@@ -11,11 +11,14 @@ node_modules
 dist
 dist-react
 dist-electron
-native/build/
 agent_work
 *.local
 *.ctool-ai-work.json
 *.ai-translated.json
+
+# Native build output only. Keep native sources, CMake files and
+# vendor/minhook sources + license under version control.
+/native/build/
 
 # Editor directories and files
 .vscode/*

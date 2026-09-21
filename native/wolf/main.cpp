@@ -2,6 +2,7 @@
 #include <string>
 #include <algorithm>
 #include "database_reader.h"
+#include "runtime_control.h"
 #include <sstream>
 
 static std::wstring env(const wchar_t* name) {
@@ -40,11 +41,12 @@ static DWORD WINAPI bootstrap(void*) {
   if (pipe == INVALID_HANDLE_VALUE) return 2;
   const std::string base = "\"protocolVersion\":1,\"sessionId\":\"" + session +
     "\",\"nonce\":\"" + nonce + "\",\"pid\":" + std::to_string(GetCurrentProcessId());
-  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"goldWriteProtocol\":1,\"inventoryWriteProtocol\":1,\"capabilities\":[]}")) {
+  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"goldWriteProtocol\":1,\"inventoryWriteProtocol\":1,\"runtimeProtocol\":1,\"capabilities\":[]}")) {
     CloseHandle(pipe); return 3;
   }
   wolf::DatabaseReader reader;
   reader.locate();
+  wolf::RuntimeControl runtime;
   std::string pending;ULONGLONG lastHeartbeat=0;bool alive=true;
   while (alive) {
     if(GetTickCount64()-lastHeartbeat>=1000){
@@ -80,12 +82,13 @@ static DWORD WINAPI bootstrap(void*) {
           // This only resolves an existing numeric record. The host maps a
           // semantic item identity to this coordinate immediately before use.
           payload=reader.writeNumber(static_cast<uint32_t>(kind),static_cast<uint32_t>(t),static_cast<uint32_t>(start),static_cast<uint32_t>(fs),static_cast<int32_t>(expected),static_cast<int32_t>(value));
-        }else throw std::runtime_error("unknown_operation");
+        }else payload=runtime.command(op,input);
       } catch(const std::exception& e){payload="{\"status\":\"unavailable\",\"reason\":"+wolf::quote(e.what())+"}";}
       if(!sendFrame(pipe,"{"+base+",\"type\":\"rpc\",\"requestId\":"+std::to_string(id)+",\"payload\":"+payload+"}")){alive=false;break;}
     }
     Sleep(100);
   }
+  try{runtime.reset();}catch(const std::exception&){} // DLL remains resident; clocks continue at 1x.
   CloseHandle(pipe);
   return 0;
 }
