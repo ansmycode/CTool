@@ -51,6 +51,7 @@
       "src/electron/**/*",
       "src/engine/**/*",
       "src/utils/**/*",
+      "src/shared/**/*",
       "dist-react/**/*",
       "logo.png",
       "package.json"
