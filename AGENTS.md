@@ -12,6 +12,8 @@ Wolf 完整设计见 [适配方案](docs/WOLF_IMPLEMENTATION_PLAN.md)，实际�
 
 理解现有 Wolf 实现优先读 [代码导读](docs/WOLF_CODE_WALKTHROUGH.md)：逐层解释启动注入、特征扫描、数据库指针链、业务映射、按焦点刷新、金币写入及现有库存写入范围。当前数据库访问是内存扫描读取，不是数据库函数 Hook。
 
+2026-09-19 新增数值变量查看/修改、0.25–4 倍变速和穿墙开关，用户已确认三项功能在其测试游戏中正常（不代表全部版本兼容）。入口为 `GameEngineAdapter.runtime` → `game:wolf-runtime` → `native/wolf/runtime_control.h`。变量按组/ID 读写，`wolfVariables.ts` 将运行值与系统库 `14 + group` 名称表按 ID 联查，按会话缓存目录、焦点刷新重建，结构不符显式降级；Wolf 金币、库存、变量与速度统一使用 `BlurNumberInput` 失焦提交，保留编辑旧值，清空或未改值不写入；变速与穿墙使用 MinHook，数据库读取方式不变。实现证据、限制和验收步骤见 [运行时功能](docs/WOLF_RUNTIME_FEATURES.md)。
+
 技术栈：Electron 37、React 19、TypeScript 5、Vite 7、Ant Design 5。Electron 主进程与测试代码主要使用原生 ESM JavaScript，渲染层主要使用 TypeScript/TSX。
 
 ## 运行架构
@@ -65,7 +67,7 @@ WolfCheatMenu 页面
 - MV/MZ Adapter：`src/game/adapters/mvmz.ts`
 - 状态与操作编排：`src/game/useGameFeatures.ts`
 - 向子页面提供单项数据：`src/game/GameFeatureContext.tsx`
-- MV/MZ 功能页注册与能力过滤：`src/ui/CheatMenu/tabRegistry.tsx`
+- MV/MZ 功能页注册与能力过滤：`src/ui/CheatMenu/mvmz/tabRegistry.tsx`
 - 引擎 UI 分流：`src/ui/CheatMenu/index.tsx`；具体页面为 `MvmzCheatMenu.tsx`、`WolfCheatMenu.tsx`
 - HTTP 封装：`src/lib/http.ts`
 
@@ -73,13 +75,15 @@ WolfCheatMenu 页面
 
 ## 主要目录
 
+修改器界面按 `src/ui/CheatMenu/mvmz/`、`wolf/`、`shared/` 分类；根目录仅保留引擎分流与公共布局。MV/MZ 页面在 `mvmz/pages/`，Wolf 分为 `base/`、`inventory/`、`variables/`，无引擎语义的组件与 Hook 放 `shared/`。完整导航见 [CheatMenu 目录说明](src/ui/CheatMenu/README.md)。
+
 2026-09-14 库存展示规则更新：已注册定义为主表，成功读取且映射明确的背包按 ID 覆盖数量；缺少持有记录显示 0，读取失败/未确认映射保持不可用。显示 0 不会创建游戏记录，也不代表存在可写地址。MV/MZ 使用 `InventoryTable`；Wolf 使用独立 `WolfInventoryTable` 与动态 collections 编排，仅复用搜索、滚动和草稿值等无业务语义的基础组件。
 
 Wolf 物品分类由映射结果生成独立标签页，每分类完整虚拟滚动表，无 UI 分页。DLL 已连通但运行时数据库尚未构造时，Wolf 启动遮罩会以短间隔重试目录读取，分类成功后才解除；正常使用阶段不后台轮询，仅在焦点、手动刷新或写入后更新活动分类。底层仍按 10 行分批读取，库存边界查询运行时行数，不以初始缓存行数跳过后续数据。读取失败与未确认映射不能按零库存处理。
 
 Wolf 普通 UI 展示金币控制台和物品资料；原始数据库、手动金币候选和详细诊断只在 DEV 可见。Wolf adapter 独有 collections 接口通过 databaseMapping.js 和 wolfCollections.ts 解释可选基本系统语义，不向 MV/MZ 添加虚假能力。映射规则、MY 三项库存核验及多游戏扩展边界见 [Wolf 映射](docs/WOLF_MAPPING.md)。金币双向修改已由用户验收；当前确认映射的现有库存行可修改。库存 UI 已改传 collectionKey + itemId，wolfDriver 写前重读目录并解析 quantityBinding；DLL writeNumber 执行既有数字记录写入。新增表内数量字段规则只有合成测试，尚未经真实游戏验证。当前未实现缺失记录创建，不能宣称已支持所有注册物品；不同游戏的数量映射和记录初始化流程仍需验证。
 
-UI 在 `CheatMenu/index.tsx` 按引擎分流：`MvmzCheatMenu` 只维护 MV/MZ 页签、原有加载遮罩与功能刷新，`WolfCheatMenu` 只维护 DLL 初始化遮罩、动态库存和 DEV 数据库页。Wolf 的首个“基础功能”页由 `WolfBaseFeaturesPage` 承载，当前只有经验证的金币能力，后续速度、战斗或角色能力也在这里增加；`WolfGoldReadout/WolfGoldEditor` 只是该页内部的金币控件。MV/MZ 主页保留自己的紧凑金币输入框和失焦提交行为。setGameGold 经会话专用 IPC 调用，需 goldWriteProtocol=1；只允许当前绑定的可变数据库数字字段并核对旧值、回读确认。数据库浏览 IPC 不允许写入。原生后台单值写入不是主线程事务，不在读档/切场景期间使用；不要把未知背包布局直接套用 MV/MZ。
+UI 在 `CheatMenu/index.tsx` 按引擎分流：`MvmzCheatMenu` 只维护 MV/MZ 页签、原有加载遮罩与功能刷新，`WolfCheatMenu` 维护 DLL 初始化、动态库存、数值变量和 DEV 数据库页。Wolf 的首个“基础功能”页由 `WolfBaseFeaturesPage` 承载，包含金币和独立的变速/穿墙控件；新运行时协议就绪后，基础功能与变量不被物品初始化遮罩阻挡。`WolfGoldReadout/WolfGoldEditor` 只是该页内部的金币控件。MV/MZ 主页保留自己的紧凑金币输入框和失焦提交行为。setGameGold 经会话专用 IPC 调用，需 goldWriteProtocol=1；只允许当前绑定的可变数据库数字字段并核对旧值、回读确认。数据库浏览 IPC 不允许写入。原生后台单值写入不是主线程事务，不在读档/切场景期间使用；不要把未知背包布局直接套用 MV/MZ。
 
 ```text
 src/ui/                 React 页面；Main 负责选游戏，CheatMenu 负责运行时功能
@@ -105,15 +109,15 @@ tool_data/              打包时随应用分发的工具数据
 | 任务 | 优先读取 |
 | --- | --- |
 | 修改启动页、历史页或顶层导航 | `src/ui/Main/index.tsx`，再读对应 `src/ui/*` 页面 |
-| 增改 MV/MZ 修改器页面 | `src/ui/CheatMenu/MvmzCheatMenu.tsx`、`tabRegistry.tsx`、目标页面、`src/game/features.ts`、`src/game/useGameFeatures.ts` |
-| 增改 Wolf 修改器页面 | `src/ui/CheatMenu/WolfCheatMenu.tsx`、`CollectionBrowser.tsx`、`WolfInventoryTable.tsx`、Wolf adapter 与会话 IPC |
+| 增改 MV/MZ 修改器页面 | `src/ui/CheatMenu/mvmz/MvmzCheatMenu.tsx`、`tabRegistry.tsx`、目标页面、`src/game/features.ts`、`src/game/useGameFeatures.ts` |
+| 增改 Wolf 修改器页面 | `src/ui/CheatMenu/wolf/WolfCheatMenu.tsx`、`CollectionBrowser.tsx`、`WolfInventoryTable.tsx`、Wolf adapter 与会话 IPC |
 | 新增游戏数据能力或接口 | 上述文件，再读 `src/game/types.ts`、`src/game/adapters/mvmz.ts`、`inject/cheat.js` |
 | 支持新游戏引擎 | `src/game/types.ts`、`src/game/registry.ts`、新 Adapter、检测/注入服务；不要把 MV/MZ 分支散落进 UI |
 | 修改游戏选择、文件操作或系统能力 | `src/electron/preload.js`、`src/global.d.ts`、`src/electron/ipc/registerIpcHandlers.js`、对应 service |
 | 修改注入与退出清理 | `src/electron/services/gameSessionService.js`、`src/electron/engines/*`、`src/engine/mvmz/*`、`tests/injection/*`、`tests/wolf/*` |
 | 修改文本提取或内嵌翻译 | `src/electron/services/translationService.js`、`translationEngineAdapters.js`、`gameDataBackupService.js`、`src/engine/mvmz/extract.js` |
 | 修改 AI 批量翻译 | `src/ui/AITranslation/*`、`src/electron/ai/*`、`src/types/AITranslation.ts`、`tests/ai/*` |
-| 修改全局快捷键 | `src/game/shortcut*`、`src/electron/services/globalShortcutService.js`、`src/ui/CheatMenu/shortcuts/*` |
+| 修改全局快捷键 | `src/game/shortcut*`、`src/electron/services/globalShortcutService.js`、`src/ui/CheatMenu/mvmz/pages/shortcuts/*` |
 | 修改开发假游戏预览 | `src/dev/*`、`src/ui/App.tsx` |
 | 修改打包内容 | `package.json` 的 `build`、`vite.config.ts`、`src/electron/services/appResourceService.js` |
 
@@ -143,6 +147,7 @@ npm run test:injection
 npm run build:native
 npm run test:wolf
 npm run test:native
+npm run test:native:unit
 npm run dist
 ```
 
