@@ -18,14 +18,14 @@ function createTemporarySource() {
   const sourcePath = path.join(directory, "Japanese.json");
   fs.writeFileSync(sourcePath, JSON.stringify(Object.fromEntries(
     Array.from({ length: 500 }, (_, index) => {
-      const text = `こんにちは、旅人 ${index}。`;
+      const text = `text-${index}`;
       return [text, text];
     }),
   )));
   return { directory, sourcePath };
 }
 
-test("500 条 mock 默认按每批 100 条拆成 5 批", () => {
+test("500 条 mock 默认按每批 1000 条组成一批", () => {
   const { directory, sourcePath } = createTemporarySource();
   try {
     assert.equal(inspectAITranslationSource(sourcePath).hasWorkFile, false);
@@ -37,8 +37,8 @@ test("500 条 mock 默认按每批 100 条拆成 5 批", () => {
 
     const workFile = JSON.parse(fs.readFileSync(prepared.workFilePath, "utf8"));
     const batches = createTranslationBatches(workFile.items);
-    assert.equal(batches.length, 5);
-    assert.equal(batches.every((batch) => batch.length === 100), true);
+    assert.equal(batches.length, 1);
+    assert.equal(batches[0].length, 500);
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }

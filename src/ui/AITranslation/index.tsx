@@ -406,7 +406,7 @@ const AITranslation: React.FC = () => {
 
         <div className="ai-translation-actions">
           <Typography.Text type="secondary">
-            {`并发 ${values?.execution?.concurrency ?? 1} · 每批最多 ${values?.execution?.maxEntries ?? 100} 条`}
+            {`并发 ${values?.execution?.concurrency ?? DEFAULT_AI_TRANSLATION_SETTINGS.concurrency} · 每批最多 ${values?.execution?.maxEntries ?? DEFAULT_AI_TRANSLATION_SETTINGS.maxEntries} 条`}
           </Typography.Text>
           <Space>
             <Button
