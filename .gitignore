@@ -20,6 +20,9 @@ agent_work
 # vendor/minhook sources + license under version control.
 /native/build/
 
+# Local design and research documents are not versioned.
+/docs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
