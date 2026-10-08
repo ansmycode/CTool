@@ -1,3 +1,4 @@
+import { abortable } from './cancellation.js';
 const SUPPORTED_PROVIDERS = new Set(["openai", "deepseek"]);
 
 class AIProviderError extends Error {
@@ -75,13 +76,16 @@ function friendlyHttpError(status, providerMessage) {
   return `AI 服务请求失败（HTTP ${status}）。`;
 }
 
-async function postJson(url, body, apiKey, { timeoutMs = 120000, fetchImpl = fetch } = {}) {
+async function postJson(url, body, apiKey, { timeoutMs = 120000, fetchImpl = fetch, signal } = {}) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const cancel = () => controller.abort(signal.reason);
+  signal?.addEventListener('abort', cancel, { once: true });
+  if (signal?.aborted) cancel();
+  const timer = setTimeout(() => controller.abort(new AIProviderError('AI 服务响应超时。', { retryable: true })), timeoutMs);
   try {
     let response;
     try {
-      response = await fetchImpl(url, {
+      response = await abortable(() => fetchImpl(url, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -89,17 +93,20 @@ async function postJson(url, body, apiKey, { timeoutMs = 120000, fetchImpl = fet
         },
         body: JSON.stringify(body),
         signal: controller.signal,
-      });
+      }), controller.signal);
     } catch (error) {
-      if (error?.name === "AbortError") {
-        throw new AIProviderError("AI 服务响应超时。", { retryable: true });
-      }
+      if (controller.signal.aborted) throw controller.signal.reason;
       throw new AIProviderError("无法连接 AI 服务，请检查网络和 API 地址。", {
         retryable: true,
       });
     }
 
-    const rawText = await response.text();
+    let rawText;
+    try { rawText = await abortable(() => response.text(), controller.signal); }
+    catch {
+      if (controller.signal.aborted) throw controller.signal.reason;
+      throw new AIProviderError('AI 响应读取中断，请重试。', { retryable: true });
+    }
     let data = null;
     if (rawText) {
       try {
@@ -127,6 +134,7 @@ async function postJson(url, body, apiKey, { timeoutMs = 120000, fetchImpl = fet
     return data;
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', cancel);
   }
 }
 

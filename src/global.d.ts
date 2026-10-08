@@ -65,6 +65,8 @@ declare global {
       ) => Promise<{ success: boolean; backupPath: string }>;
       loadJson: () => Promise<void>;
       selectAITranslationJson: () => Promise<AITranslationFileSelection | null>;
+      getAITranslationTask: (sourcePath: string) => Promise<import('@/types/AITranslation').AITranslationTaskStatus>;
+      stopAITranslation: (sourcePath: string) => Promise<import('@/types/AITranslation').AITranslationTaskStatus>;
       prepareAITranslationWorkFile: (
         sourcePath: string,
       ) => Promise<AITranslationPreparation>;

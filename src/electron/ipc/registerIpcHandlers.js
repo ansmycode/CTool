@@ -19,7 +19,7 @@ import {
 } from "../ai/workFile.js";
 import { testAIProviderConnection } from "../ai/providerClient.js";
 import { runAITranslation } from "../ai/translator.js";
-import { runExclusiveAITranslation } from "../ai/taskRegistry.js";
+import { runExclusiveAITranslation, getAITranslationTask, stopAITranslationTask } from "../ai/taskRegistry.js";
 import {
   createGameDataBackup,
   listGameDataBackups,
@@ -155,6 +155,16 @@ export function registerIpcHandlers({
     }
   });
 
+  ipcMain.handle('ai-translation:task-status', (_event, sourcePath) => {
+    if (typeof sourcePath !== 'string' || !sourcePath) throw new Error('缺少原始翻译 JSON 路径。');
+    return { ...getAITranslationTask(sourcePath), file: inspectAITranslationSource(sourcePath) };
+  });
+  ipcMain.handle('ai-translation:stop', async (_event, sourcePath) => {
+    if (typeof sourcePath !== 'string' || !sourcePath) throw new Error('缺少原始翻译 JSON 路径。');
+    await stopAITranslationTask(sourcePath);
+    return { ...getAITranslationTask(sourcePath), file: inspectAITranslationSource(sourcePath) };
+  });
+
   ipcMain.handle(
     "ai-translation:start",
     async (_event, { sourcePath, config }) => {
@@ -162,8 +172,8 @@ export function registerIpcHandlers({
         throw new Error("缺少原始翻译 JSON 路径。");
       }
       try {
-        return await runExclusiveAITranslation(sourcePath, () =>
-          runAITranslation(sourcePath, config),
+        return await runExclusiveAITranslation(sourcePath, signal =>
+          runAITranslation(sourcePath, config, { signal }),
         );
       } catch (error) {
         throw safeAIError(error, "AI 翻译失败。");

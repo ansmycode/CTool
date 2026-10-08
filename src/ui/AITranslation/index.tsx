@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   AutoComplete,
@@ -18,6 +18,7 @@ import type {
   AIProviderId,
   AITranslationFileSelection,
   AITranslationFormValues,
+  AITranslationTaskStatus,
 } from "@/types/AITranslation";
 import { AI_PROVIDER_PRESETS, LANGUAGE_OPTIONS } from "./providerPresets";
 import { AI_TRANSLATION_SETTING_FIELDS, DEFAULT_AI_TRANSLATION_SETTINGS, normalizeAITranslationSettings } from "@/shared/aiTranslationSettings.js";
@@ -38,10 +39,41 @@ const AITranslation: React.FC = () => {
     useState<AITranslationFileSelection | null>(null);
   const [isSelectingFile, setIsSelectingFile] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [task, setTask] = useState<AITranslationTaskStatus | null>(null);
+  const [isStopping, setIsStopping] = useState(false);
+  const [checkingTask, setCheckingTask] = useState(false);
+  const isTranslating = isStarting || Boolean(task?.running);
   const [message, setMessage] = useState<InteractionMessage>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const values = Form.useWatch([], form);
+
+  // Renderer refresh does not end main-process work. Reattach by source path
+  // and read saved progress instead of inferring liveness from the work file.
+  useEffect(() => {
+    const sourcePath = selectedFile?.filePath;
+    if (!sourcePath) { setTask(null); return; }
+    let disposed = false;
+    let timer: ReturnType<typeof setTimeout>;
+    setCheckingTask(true);
+    const refresh = async () => {
+      try {
+        const status = await window.electronAPI.getAITranslationTask(sourcePath);
+        if (disposed) return;
+        setTask(status);
+        setSelectedFile(current => current?.filePath === sourcePath ? status.file : current);
+      } catch (error) {
+        if (!disposed) setMessage({ type: 'error', text: error instanceof Error ? error.message : '无法查询翻译任务状态。' });
+      } finally {
+        if (!disposed) {
+          setCheckingTask(false);
+          timer = setTimeout(refresh, 2000);
+        }
+      }
+    };
+    void refresh();
+    return () => { disposed = true; clearTimeout(timer); };
+  }, [selectedFile?.filePath, isStarting]);
 
   const preset = useMemo(
     () => AI_PROVIDER_PRESETS.find((item) => item.value === provider)!,
@@ -91,7 +123,7 @@ const AITranslation: React.FC = () => {
     setMessage(null);
     try {
       const result = await window.electronAPI.selectAITranslationJson();
-      if (result) setSelectedFile(result);
+      if (result) { setTask(null); setCheckingTask(true); setSelectedFile(result); }
     } catch (error) {
       setMessage({
         type: "error",
@@ -137,7 +169,7 @@ const AITranslation: React.FC = () => {
   const handleStartTranslation = async () => {
     try {
       await validateConfiguration();
-      setIsTranslating(true);
+      setIsStarting(true);
       setMessage({ type: "info", text: "正在分批翻译，成功批次会立即保存到工作文件…" });
       const config = form.getFieldsValue(true) as AITranslationFormValues;
       const preparation = await window.electronAPI.startAITranslation(
@@ -157,8 +189,21 @@ const AITranslation: React.FC = () => {
         text: error instanceof Error ? error.message : "请检查当前配置。",
       });
     } finally {
-      setIsTranslating(false);
+      setIsStarting(false);
     }
+  };
+
+  const handleStopTranslation = async () => {
+    if (!selectedFile || isStopping) return;
+    setIsStopping(true);
+    try {
+      const status = await window.electronAPI.stopAITranslation(selectedFile.filePath);
+      setTask(status);
+      setSelectedFile(status.file);
+      setMessage({ type: 'info', text: '任务已停止，已完成的批次已保留。可点击继续翻译处理剩余文本。' });
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : '停止任务失败。' });
+    } finally { setIsStopping(false); }
   };
 
   return (
@@ -369,7 +414,7 @@ const AITranslation: React.FC = () => {
               </Row>
         </Modal>
 
-        {selectedFile?.hasUnfinishedWork && !message && (
+        {selectedFile?.hasUnfinishedWork && !message && !isTranslating && (
           <Alert
             className="ai-interaction-message"
             type="warning"
@@ -377,7 +422,11 @@ const AITranslation: React.FC = () => {
             message="检测到未完成的翻译进度，将自动继续。"
           />
         )}
-        {selectedFile?.hasWorkFile &&
+        {isTranslating && !message && (
+          <Alert className="ai-interaction-message" type="info" showIcon
+            message="主进程任务仍在运行，已恢复进度显示；如需重试，可先停止任务再继续。" />
+        )}
+        {selectedFile?.hasWorkFile && !isTranslating &&
           !selectedFile.hasUnfinishedWork &&
           !message && (
             <Alert
@@ -395,7 +444,7 @@ const AITranslation: React.FC = () => {
             message={<Typography.Text ellipsis={{ tooltip: message.text }}>{message.text}</Typography.Text>}
           />
         )}
-        {!selectedFile?.hasWorkFile && !message && (
+        {!selectedFile?.hasWorkFile && !message && !isTranslating && (
           <Alert
             className="ai-security-note"
             type="info"
@@ -406,9 +455,13 @@ const AITranslation: React.FC = () => {
 
         <div className="ai-translation-actions">
           <Typography.Text type="secondary">
-            {`并发 ${values?.execution?.concurrency ?? DEFAULT_AI_TRANSLATION_SETTINGS.concurrency} · 每批最多 ${values?.execution?.maxEntries ?? DEFAULT_AI_TRANSLATION_SETTINGS.maxEntries} 条`}
+            {isTranslating
+              ? `${task?.stopping || isStopping ? '正在停止' : '后台翻译中'} · 已保存 ${selectedFile?.summary?.translated ?? 0} 条 · 跳过 ${selectedFile?.summary?.skipped ?? 0} 条 · 待处理 ${(selectedFile?.summary?.untranslated ?? 0) + (selectedFile?.summary?.error ?? 0)} 条`
+              : `并发 ${values?.execution?.concurrency ?? DEFAULT_AI_TRANSLATION_SETTINGS.concurrency} · 每批最多 ${values?.execution?.maxEntries ?? DEFAULT_AI_TRANSLATION_SETTINGS.maxEntries} 条`}
           </Typography.Text>
           <Space>
+            {isTranslating && <Button size="small" disabled={isStopping || Boolean(task?.stopping)}
+              loading={isStopping} onClick={handleStopTranslation}>停止任务</Button>}
             <Button
               size="small"
               disabled={!hasRequiredValues || isTranslating}
@@ -420,7 +473,7 @@ const AITranslation: React.FC = () => {
             <Button
               size="small"
               type="primary"
-              disabled={!hasRequiredValues || isTestingConnection}
+              disabled={!hasRequiredValues || isTestingConnection || checkingTask || isTranslating}
               loading={isTranslating}
               onClick={handleStartTranslation}
             >

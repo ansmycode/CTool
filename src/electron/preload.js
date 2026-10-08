@@ -57,6 +57,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   loadJson: () => ipcRenderer.invoke("load-json"), //加载翻译文件
   selectAITranslationJson: () =>
     ipcRenderer.invoke("ai-translation:select-source"),
+  getAITranslationTask: (sourcePath) => ipcRenderer.invoke('ai-translation:task-status', sourcePath),
+  stopAITranslation: (sourcePath) => ipcRenderer.invoke('ai-translation:stop', sourcePath),
   prepareAITranslationWorkFile: (sourcePath) =>
     ipcRenderer.invoke("ai-translation:prepare-work-file", sourcePath),
   testAITranslationConnection: (config) =>

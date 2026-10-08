@@ -1,6 +1,7 @@
 import { createTranslationBatches, runTaskPool } from "./batching.js";
 import { normalizeAITranslationSettings, DEFAULT_AI_TRANSLATION_SETTINGS } from "../../shared/aiTranslationSettings.js";
 import { AIProviderError, requestTranslationBatch } from "./providerClient.js";
+import { abortable, sleepWithSignal } from './cancellation.js';
 import {
   finishAITranslation,
   getAITranslationPaths,
@@ -11,9 +12,6 @@ import {
 } from "./workFile.js";
 
 export const DEFAULT_REQUEST_INTERVAL_MS = DEFAULT_AI_TRANSLATION_SETTINGS.requestIntervalSeconds * 1000;
-
-const wait = (milliseconds) =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export function createRequestThrottle(minIntervalMs, sleep, assertRunning = () => {}, now = Date.now) {
   let lastRequestStartedAt = -Infinity;
@@ -94,6 +92,7 @@ async function processBatch(
       sleep,
       options.maxAttempts,
     );
+    options.signal?.throwIfAborted();
     saveAITranslationBatch(sourcePath, translatedItems);
   } catch (error) {
     const shouldSplit =
@@ -125,11 +124,13 @@ async function processBatch(
 }
 
 export async function runAITranslation(sourcePath, config, options = {}) {
+  const signal = options.signal;
+  signal?.throwIfAborted();
   const settings = normalizeAITranslationSettings(config?.execution);
   const executionOptions = {
     ...options,
     maxAttempts: settings.maxRetries + 1,
-    requestOptions: { timeoutMs: settings.requestTimeoutSeconds * 1000, ...options.requestOptions },
+    requestOptions: { timeoutMs: settings.requestTimeoutSeconds * 1000, ...options.requestOptions, signal },
   };
   prepareAITranslationWorkFile(sourcePath);
   const { workFilePath } = getAITranslationPaths(sourcePath);
@@ -139,19 +140,20 @@ export async function runAITranslation(sourcePath, config, options = {}) {
     maxCharacters: settings.maxCharacters,
     ...options.batchOptions,
   });
-  const requestBatch = options.requestBatch ?? requestTranslationBatch;
-  const sleep = options.sleep ?? wait;
+  const requestBatch = (...args) => abortable(() => (options.requestBatch ?? requestTranslationBatch)(...args), signal);
+  const sleep = options.sleep ? ms => abortable(() => options.sleep(ms), signal) : ms => sleepWithSignal(ms, signal);
   const minRequestIntervalMs =
     options.minRequestIntervalMs ?? settings.requestIntervalSeconds * 1000;
   let stopped = false;
   let fatalError;
   const stoppedError = new Error("本轮翻译已停止派发新请求。");
   const scheduleRequest = createRequestThrottle(minRequestIntervalMs, sleep, () => {
+    signal?.throwIfAborted();
     if (stopped) throw stoppedError;
   });
 
   await runTaskPool(batches, async (batch) => {
-    if (stopped) return;
+    if (stopped || signal?.aborted) return;
     try {
       await processBatch(
         sourcePath,
@@ -163,6 +165,7 @@ export async function runAITranslation(sourcePath, config, options = {}) {
         sleep,
       );
     } catch (error) {
+      if (signal?.aborted) return;
       const message = error instanceof Error ? error.message : "当前批次翻译失败。";
       const cause = error instanceof BatchTranslationError ? error.cause : error;
       if (cause === stoppedError) return;

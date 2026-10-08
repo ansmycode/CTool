@@ -16,6 +16,13 @@ export interface AITranslationSummary {
   untranslated: number;
 }
 
+export interface AITranslationTaskStatus {
+  running: boolean;
+  stopping: boolean;
+  startedAt: number | null;
+  file: AITranslationFileSelection;
+}
+
 export interface AITranslationPreparation extends AITranslationFileSelection {
   isComplete: boolean;
   summary: AITranslationSummary;
