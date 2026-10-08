@@ -34,6 +34,7 @@ export interface GameEngineAdapter {
   readonly features: GameFeatureReaders;
   readonly shortcutActions: ReadonlySet<GameShortcutActionId>;
   readonly shortcutPolicy: GameShortcutPolicy;
+  executeShortcutAction?(actionId: GameShortcutActionId): Promise<void>;
   init(): Promise<boolean>;
   setGameGold?(amount: number,expectation?:import("./database").GoldWriteExpectation): Promise<void>;
   modifyVariables?(id: number, value: number | string): Promise<void>;

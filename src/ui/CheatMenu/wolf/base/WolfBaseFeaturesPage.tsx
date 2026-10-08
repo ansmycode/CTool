@@ -16,11 +16,13 @@ export default function WolfBaseFeaturesPage({
   onWrite,
   runtime,
   active,
+  refreshToken = 0,
 }: {
   session: GameSessionSnapshot;
   access: GameDatabaseAccess;
   runtime?: GameRuntimeAccess;
   active: boolean;
+  refreshToken?: number;
   onWrite?: (
     value: number,
     expectation?: GoldWriteExpectation,
@@ -44,7 +46,7 @@ export default function WolfBaseFeaturesPage({
           <Tag>{session.game?.engine}</Tag>
         </Space>
       </header>
-      {runtime ? <WolfRuntimeControls key={session.sessionId} access={runtime} active={active} enabled={!!session.runtimeAvailable} goldContent={goldContent} /> : (
+      {runtime ? <WolfRuntimeControls key={session.sessionId} access={runtime} active={active} enabled={!!session.runtimeAvailable} goldContent={goldContent} refreshToken={refreshToken} /> : (
         <section className="base-section">
           <div className="base-section-heading"><Typography.Title level={4}>常用数据</Typography.Title><Typography.Text type="secondary">修改后离开输入框即可应用</Typography.Text></div>
           <div className="base-value-grid">{goldContent}</div>

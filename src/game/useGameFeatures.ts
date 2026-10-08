@@ -120,6 +120,7 @@ export function useGameFeatures(
     if (!adapter.shortcutActions.has(actionId)) {
       throw new Error("当前游戏引擎不支持此快捷功能");
     }
+    if (adapter.executeShortcutAction) return adapter.executeShortcutAction(actionId);
 
     if (actionId === "achieveVictory") {
       return achieveVictory();

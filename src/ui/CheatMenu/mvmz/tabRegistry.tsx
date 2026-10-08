@@ -12,7 +12,7 @@ import type {
 import type {
   ShortcutBindings,
   ShortcutRegistrationResults,
-} from "./pages/shortcuts/types";
+} from "../shared/shortcuts/types";
 
 const Home = lazy(() => import("./pages/home/index"));
 const ItemsTable = lazy(() => import("./pages/itemsTable/index"));
@@ -22,7 +22,7 @@ const VariablesTable = lazy(() => import("./pages/variablesTable/index"));
 const SwitchesTable = lazy(() => import("./pages/switchesTable/index"));
 const ActorTable = lazy(() => import("./pages/actorTable/index"));
 const TranslateTool = lazy(() => import("./pages/translateTool/index"));
-const ShortcutSettings = lazy(() => import("./pages/shortcuts/index"));
+const ShortcutSettings = lazy(() => import("../shared/shortcuts/index"));
 
 interface CheatMenuContext {
   gameInfo: any;

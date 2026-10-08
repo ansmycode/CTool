@@ -5,8 +5,8 @@ import BlurNumberInput from "../../shared/components/BlurNumberInput";
 import { runtimeError } from "@/game/runtime";
 import type { GameRuntimeAccess, WolfRuntimeStatus } from "@/game/runtime";
 
-export default function WolfRuntimeControls({ access, active, enabled, goldContent }: {
-  access: GameRuntimeAccess; active: boolean; enabled: boolean; goldContent: ReactNode;
+export default function WolfRuntimeControls({ access, active, enabled, goldContent, refreshToken = 0 }: {
+  access: GameRuntimeAccess; active: boolean; enabled: boolean; goldContent: ReactNode; refreshToken?: number;
 }) {
   const [state, setState] = useState<WolfRuntimeStatus>();
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export default function WolfRuntimeControls({ access, active, enabled, goldConte
     const focus = () => { void refresh(); };
     window.addEventListener("focus", focus);
     return () => { invalidate(); window.removeEventListener("focus", focus); };
-  }, [active, enabled, refresh, invalidate]);
+  }, [active, enabled, refresh, invalidate, refreshToken]);
   const apply = async (kind: "speed" | "noclip", value: number | boolean) => {
     if (working.current) throw new Error("操作进行中，请稍后重试");
     working.current = true; setBusy(true); setError("");

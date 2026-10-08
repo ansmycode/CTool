@@ -168,11 +168,13 @@ tool_data/              打包时随应用分发的工具数据
 | 修改 Wolf 运行时翻译 | `native/wolf/text_hook.h`、`text_dictionary.h`、`src/electron/wolf/translationDictionary.js`、`textProtocol.js`、`wolfDriver.js`、`tests/wolf/textTranslation.test.js`、`native/tests/text_test.cpp` |
 | 修改 Wolf 文件提取 | `src/electron/services/wolfTextService.js`、`src/engine/wolf/text/*`、`tests/wolf/text*.test.js` |
 | 修改 AI 批量翻译 | `src/ui/AITranslation/*`、`src/electron/ai/*`、`src/types/AITranslation.ts`、`tests/ai/*` |
-| 修改全局快捷键 | `src/game/shortcut*`、`src/electron/services/globalShortcutService.js`、`src/ui/CheatMenu/mvmz/pages/shortcuts/*` |
+| 修改全局快捷键 | `src/game/shortcut*`、`src/game/adapters/wolf.ts`、`src/electron/services/globalShortcutService.js`、`src/ui/CheatMenu/shared/shortcuts/*` |
 | 修改开发假游戏预览 | `src/dev/*`、`src/ui/App.tsx` |
 | 修改打包内容 | `package.json` 的 `build`、`vite.config.ts`、`src/electron/services/appResourceService.js` |
 
 ## 必须保持的设计约束
+
+2026-10-08 快捷键更新：MV/MZ 与 Wolf 共用 `shared/shortcuts` 配置页及 `useGameShortcuts` 注册／注销逻辑，仅允许动作目录中的触发类、开关类功能；数值输入不注册快捷键。MV/MZ 保留原 localStorage 配置键，Wolf 使用独立 `:wolf` 后缀。Wolf 当前仅有 `toggleThrough`，经 adapter 的 `executeShortcutAction` 读取当前运行时状态、验证能力后切换穿墙；不伪造 MV/MZ overview。未就绪、断连和退出时注销，关闭总开关保留绑定；同一动作执行中不接受重叠触发。快捷键成功后刷新活动基础页状态。未来触发动作必须先在对应引擎实现，再加入动作目录。
 
 - UI 使用 `GameEngineAdapter` 和统一字段，不直接依赖 MV/MZ 原始数据结构。引擎差异留在 adapter、检测、注入或翻译 adapter 中。
 - 新增 preload API 时，同步修改 `src/electron/preload.js`、`src/global.d.ts` 和 IPC handler；敏感文件与进程能力不能直接暴露给渲染层。

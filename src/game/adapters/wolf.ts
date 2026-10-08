@@ -8,7 +8,7 @@ import type { GameRuntimeAccess, WolfRuntimeRequest, WolfRuntimeResult, WolfRunt
 // Only database access and bound gold writes; no fabricated MV/MZ overview fields.
 const wolfAdapter: GameEngineAdapter = {
   features: {},
-  shortcutActions: new Set(),
+  shortcutActions: new Set(["toggleThrough"]),
   shortcutPolicy: { blockedKeysWithoutCtrlOrAlt: {} },
   async init() { return false; },
 };
@@ -34,6 +34,11 @@ export function createWolfAdapter(sessionId?:string):GameEngineAdapter {
   return {...wolfAdapter,sessionId,textTranslation:createWolfTextTranslation(sessionId),runtime:runtime && database ? withVariableNames(runtime,database) : runtime,setGameGold:async(value,expectation)=>{
     if(!sessionId||!expectation)throw new Error("金币来源未就绪");
     await window.electronAPI.setGameGold(sessionId,value,expectation);
+  },executeShortcutAction: async actionId => {
+    if (actionId !== 'toggleThrough' || !runtime) throw new Error('当前游戏引擎不支持此快捷功能');
+    const state = await runtime.status();
+    if (!state.noclip.available) throw new Error(runtimeError(state.noclip.reason));
+    await runtime.setNoclip(!state.noclip.value);
   },database,collections:database?createWolfCollections(database,(target,expected,value)=>window.electronAPI.setGameInventoryCount(sessionId!,target,expected,value)):undefined};
 }
 export default wolfAdapter;

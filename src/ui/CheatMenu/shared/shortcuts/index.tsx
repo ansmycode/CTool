@@ -197,8 +197,9 @@ const ShortcutSettings: React.FC<Props> = ({
 
       <div className={`shortcut-hint${enabled ? "" : " is-disabled"}`}>
         快捷键全局生效，可能占用游戏或其他软件的原有按键。建议使用 Ctrl、Alt
-        参与的组合键；单键等高风险设置会要求二次确认。MV/MZ 的裸 F5
-        会触发游戏重载，因此禁止设置。关闭总开关会注销快捷键，但不会删除配置。
+        参与的组合键；单键等高风险设置会要求二次确认。仅触发类与开关类功能支持快捷键。
+        {policy.blockedKeysWithoutCtrlOrAlt.F5 && 'MV/MZ 的裸 F5 会触发游戏重载，因此禁止设置。'}
+        关闭总开关会注销快捷键，但不会删除配置。
       </div>
 
       <div className="shortcut-list">

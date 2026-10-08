@@ -9,6 +9,8 @@ import CollectionBrowser from "./inventory/CollectionBrowser";
 import WolfVariablesPage from "./variables/WolfVariablesPage";
 import WolfTranslationPage from "./translation/WolfTranslationPage";
 import "../index.css";
+import ShortcutSettings from '../shared/shortcuts';
+import useGameShortcuts from '../shared/shortcuts/useGameShortcuts';
 
 const DatabaseBrowser = import.meta.env.DEV
   ? lazy(() => import("@/ui/Main/DatabaseBrowser"))
@@ -30,14 +32,21 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
   const [groups, setGroups] = useState<GameCollection[]>([]);
   const [collectionError, setCollectionError] = useState("");
   const [refreshToken, setRefreshToken] = useState(0);
+  const [runtimeRefreshToken, setRuntimeRefreshToken] = useState(0);
   const [initialization, setInitialization] = useState<
     { sessionId?: string; state: "loading" | "ready" | "failed" }
   >({ state: "loading" });
-  const { database, collections, runtime, textTranslation, setRuntimeGold } = useGameFeatures(
+  const { database, collections, runtime, textTranslation, setRuntimeGold, shortcutActions, shortcutPolicy, executeShortcutAction } = useGameFeatures(
     gameInfo.engine,
     session.sessionId,
     session.capabilities,
   );
+  const shortcuts = useGameShortcuts({ engine: 'wolf', sessionId: session.sessionId,
+    ready: !!session.runtimeAvailable && session.processState === 'running',
+    actions: shortcutActions, policy: shortcutPolicy, execute: async actionId => {
+      await executeShortcutAction(actionId);
+      setRuntimeRefreshToken(token => token + 1);
+    } });
   const databaseReady = !!session.databaseReadOnly;
   const initializing =
     databaseReady &&
@@ -110,6 +119,7 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
                 onWrite={setRuntimeGold}
                 runtime={runtime}
                 active={activeKey === "runtime"}
+                refreshToken={runtimeRefreshToken}
               />
             ),
           },
@@ -154,10 +164,14 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
           },
         ]
       : []),
+    { key: 'shortcuts', label: '快捷键', className: 'tab-pane-fullheight', children: <ShortcutSettings
+      actions={shortcutActions} bindings={shortcuts.bindings} registrationResults={shortcuts.registrationResults}
+      enabled={shortcuts.enabled} policy={shortcutPolicy} onEnabledChange={shortcuts.setEnabled} onBindingChange={shortcuts.setBinding} /> },
   ];
 
   return (
     <div className="cheat-menu">
+      {shortcuts.contextHolder}
       {collectionError && (
         <div className="wolf-collection-error">
           物品识别失败：{collectionError}（重新连接游戏后重试）
