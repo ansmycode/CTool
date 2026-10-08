@@ -5,6 +5,8 @@
  */
 
 import { dialog, ipcMain } from "electron";
+import { extractWolfSessionText } from "../services/wolfTextService.js";
+import { readWolfDictionary } from '../wolf/translationDictionary.js';
 import { detectGame } from "../services/gameDetectionService.js";
 import { deleteHistory, readHistory } from "../services/gameHistoryService.js";
 import {
@@ -56,6 +58,11 @@ export function registerIpcHandlers({
   ipcMain.handle("game:snapshot", () => gameSessionService.snapshot());
   ipcMain.handle("game:database-read", (_event,sessionId,request)=>gameSessionService.readDatabase(sessionId,request));
   ipcMain.handle("game:wolf-runtime", (_event,sessionId,request)=>gameSessionService.runtime(sessionId,request));
+  ipcMain.handle("game:wolf-text-extract", async (_event, sessionId) => {
+    const result = await extractWolfSessionText(gameSessionService.snapshot(), sessionId);
+    if (gameSessionService.snapshot()?.sessionId !== sessionId) throw new Error('游戏会话已变化，提取结果已留在原游戏缓存目录');
+    return result;
+  });
   ipcMain.handle("game:gold-source", (_event,sessionId,target)=>gameSessionService.selectGoldSource(sessionId,target));
   ipcMain.handle("game:telemetry-refresh", (_event,sessionId)=>gameSessionService.refreshTelemetry(sessionId));
   ipcMain.handle("game:gold-write", (_event,sessionId,value,expectation)=>gameSessionService.setGold(sessionId,value,expectation));
@@ -116,6 +123,16 @@ export function registerIpcHandlers({
     if (!chooseFile.filePaths[0]) return;
     return readTranslationJson(chooseFile.filePaths[0]);
   });
+  ipcMain.handle('game:wolf-translation-load', async (_event, sessionId) => {
+    const before=gameSessionService.snapshot();
+    if(before?.sessionId!==sessionId||before?.game?.engine!=='wolf'||before.processState!=='running')throw new Error('Wolf 游戏会话已变化');
+    const choice=await dialog.showOpenDialog(getMainWindow(),{properties:['openFile'],filters:[{name:'译文 JSON',extensions:['json']}]});
+    if(!choice.filePaths[0])return null;
+    const dictionary=await readWolfDictionary(choice.filePaths[0],before.game.gamePath);
+    return gameSessionService.wolfTextTranslation(sessionId,'load',dictionary);
+  });
+  ipcMain.handle('game:wolf-translation-status',(_event,sessionId)=>gameSessionService.wolfTextTranslation(sessionId,'status'));
+  ipcMain.handle('game:wolf-translation-clear',(_event,sessionId)=>gameSessionService.wolfTextTranslation(sessionId,'clear'));
 
   ipcMain.handle("ai-translation:select-source", async () => {
     const chooseFile = await dialog.showOpenDialog(getMainWindow(), {

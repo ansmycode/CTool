@@ -7,6 +7,7 @@ import type { GameSessionSnapshot } from "@/types/GameSession";
 import WolfBaseFeaturesPage from "./base/WolfBaseFeaturesPage";
 import CollectionBrowser from "./inventory/CollectionBrowser";
 import WolfVariablesPage from "./variables/WolfVariablesPage";
+import WolfTranslationPage from "./translation/WolfTranslationPage";
 import "../index.css";
 
 const DatabaseBrowser = import.meta.env.DEV
@@ -32,7 +33,7 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
   const [initialization, setInitialization] = useState<
     { sessionId?: string; state: "loading" | "ready" | "failed" }
   >({ state: "loading" });
-  const { database, collections, runtime, setRuntimeGold } = useGameFeatures(
+  const { database, collections, runtime, textTranslation, setRuntimeGold } = useGameFeatures(
     gameInfo.engine,
     session.sessionId,
     session.capabilities,
@@ -131,6 +132,12 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
         />
       ) : null,
     })),
+    {
+      key: "translation",
+      label: "翻译",
+      className: "tab-pane-fullheight",
+      children: <WolfTranslationPage key={session.sessionId} access={textTranslation} />,
+    },
     ...(import.meta.env.DEV && database && DatabaseBrowser
       ? [
           {
@@ -157,10 +164,10 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
         </div>
       )}
       <LoadingOverlay
-        visible={(!databaseReady || initializing) && !session.runtimeAvailable}
+        visible={activeKey !== "translation" && (!databaseReady || initializing) && !session.runtimeAvailable}
         text="正在初始化游戏数据库与物品资料…"
       />
-      {initializing && session.runtimeAvailable && <Alert type="info" message="正在加载物品资料，基础功能与数值变量可独立使用。" />}
+      {activeKey !== "translation" && initializing && session.runtimeAvailable && <Alert type="info" message="正在加载物品资料，基础功能与数值变量可独立使用。" />}
       <Tabs
         className="cheat-menu-tabs"
         activeKey={activeKey}

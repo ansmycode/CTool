@@ -140,6 +140,7 @@ export function useGameFeatures(
   };
 
   return {
+    textTranslation: adapter.textTranslation,
     database: adapter.database,
     runtime: adapter.runtime,
     collections: adapter.collections,

@@ -83,6 +83,15 @@ export function createGameSessionService({ detect, createDriver, publish, saveHi
         throw new Error("会话已变化，操作结果未确认");
       return result;
     },
+    async wolfTextTranslation(sessionId,action,dictionary) {
+      const entry=current;
+      if(!entry||entry.finalized||entry.finishing||entry.snapshot.sessionId!==sessionId||
+         entry.snapshot.game?.engine!=='wolf'||entry.snapshot.state!=='degraded'||entry.snapshot.processState!=='running'||!entry.driver.textTranslation)
+        throw new Error('Wolf 文本翻译会话无效或未就绪');
+      const result=await entry.driver.textTranslation(action,dictionary);
+      if(current!==entry||entry.finalized||entry.finishing||entry.snapshot.state!=='degraded')throw new Error('游戏会话已变化');
+      return result;
+    },
     selectGoldSource(sessionId,target) {
       if(!current||current.finalized||current.snapshot.sessionId!==sessionId||!current.snapshot.databaseReadOnly||!current.driver.selectGoldSource)
         throw new Error("数据库会话无效或未就绪");

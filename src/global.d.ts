@@ -29,6 +29,10 @@ declare global {
       detectEngine: (exePath: string) => Promise<DetectedGame>;
       launchGame: (exePath: string) => Promise<GameSessionSnapshot>;
       getGameSession: () => Promise<GameSessionSnapshot | null>;
+      extractWolfText:(sessionId:string)=>Promise<import("@/game/textTranslation").GameTextExtractionResult>;
+      loadWolfTranslation:(sessionId:string)=>Promise<import("@/game/textTranslation").GameTextTranslationStatus|null>;
+      getWolfTranslationStatus:(sessionId:string)=>Promise<import("@/game/textTranslation").GameTextTranslationStatus>;
+      clearWolfTranslation:(sessionId:string)=>Promise<import("@/game/textTranslation").GameTextTranslationStatus>;
       readGameDatabase:(sessionId:string,request:import("@/game/database").DatabaseRequest)=>Promise<import("@/game/database").DatabaseResult>;
       wolfRuntime:(sessionId:string,request:import("@/game/runtime").WolfRuntimeRequest)=>Promise<import("@/game/runtime").WolfRuntimeResult>;
       selectGameGoldSource:(sessionId:string,target:import("@/game/database").DatabaseCellRef|null)=>Promise<void>;

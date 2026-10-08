@@ -1,0 +1,34 @@
+.wolf-translation-page {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 20px 12px;
+  overflow: hidden;
+  background: #f7f8fa;
+}
+
+.wolf-translation-page > .tool-page-header {
+  margin-bottom: 0;
+}
+
+.wolf-translation-page .wolf-translation-cache-hint {
+  display: block;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.wolf-translation-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 7px 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}

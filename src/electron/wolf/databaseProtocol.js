@@ -3,9 +3,11 @@ import {
   validateRuntimeRequest,
   validateRuntimeReply,
 } from "./runtimeProtocol.js";
+import { textOperations, validateTextRequest, validateTextReply } from './textProtocol.js';
 const integer = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
 const label = (v) => typeof v === "string" && v.length <= 2048;
 export function validateDatabaseRequest(request) {
+  if (textOperations.has(request?.operation)) return validateTextRequest(request);
   if (runtimeOperations.has(request?.operation))
     return validateRuntimeRequest(request);
   if (!request || !integer(request.kind, 0, 2))
@@ -84,6 +86,7 @@ function fields(values, max) {
   );
 }
 export function validateDatabaseReply(payload, request) {
+  if (textOperations.has(request?.operation)) return validateTextReply(payload);
   if (runtimeOperations.has(request?.operation))
     return validateRuntimeReply(payload, request);
   if (payload?.status === "unavailable" && label(payload.reason))

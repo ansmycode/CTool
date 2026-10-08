@@ -34,6 +34,7 @@ test("runtime handshake enables only semantic commands and detaches on protocol 
     }});
     await driver.launch({game:{gamePath:"Game.exe"},sessionId:"runtime",emit:e=>events.push(e)});
     assert.equal(events.find(e=>e.type==="connected").runtimeAvailable,true);
+    await assert.rejects(driver.textTranslation('status'),/DLL 不支持文本翻译/);
     await assert.rejects(driver.runtime({operation:"inventorywrite",kind:1}),/无效/);
     await assert.rejects(driver.readDatabase({operation:"varwrite"}),/仅允许读取/);
     assert.equal((await driver.runtime({operation:"varpage",group:2,start:0,limit:10})).rows[0].value,-3);

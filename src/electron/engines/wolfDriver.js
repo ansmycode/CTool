@@ -9,6 +9,7 @@ import { createGoldMonitor } from "../wolf/goldMonitor.js";
 import { tableCategory } from "../wolf/databaseSemantics.js";
 import { discoverCollections } from "../../engine/wolf/databaseMapping.js";
 import { validateRuntimeRequest } from "../wolf/runtimeProtocol.js";
+import { createTextTransfer } from '../wolf/translationDictionary.js';
 
 export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
   let child;
@@ -18,10 +19,12 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
   let goldWritable=false;
   let inventoryWritable=false;
   let runtimeAvailable=false;
+  let textAvailable=false;
   const databaseRpc=createDatabaseRpc(command=>{
     if(!child?.stdin.writable)throw new Error("注入器输入已关闭");
     child.stdin.write(command);
   });
+  const transferText=createTextTransfer(request=>databaseRpc.request(request));
   const catalog = async (kind) => {
     const tables=[];
     for(let start=0;start<4096;){
@@ -109,9 +112,10 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
               goldWritable=message.databaseProtocol===1&&message.goldWriteProtocol===1;
               inventoryWritable=message.databaseProtocol===1&&message.inventoryWriteProtocol===1;
               runtimeAvailable=message.runtimeProtocol===1;
+              textAvailable=message.textProtocol===1;
               emit({ type: "connected", capabilities: [], goldWritable, inventoryWritable, runtimeAvailable, databaseReadOnly:message.databaseProtocol===1,
                 message: message.databaseProtocol===1 ? (goldWritable?"DLL 已连接；数据库浏览与金币修改已开启":"DLL 已连接；数据库只读浏览与自动识别已开启") : "DLL 已连接；请重新编译 DLL 以使用数据库浏览" });
-              if(message.databaseProtocol===1||runtimeAvailable)databaseRpc.enable();
+              if(message.databaseProtocol===1||runtimeAvailable||textAvailable)databaseRpc.enable();
               if(message.databaseProtocol===1){
                 databaseRpc.enable();
                 goldMonitor=createGoldMonitor(request=>databaseRpc.request(request),gold=>emit({type:"telemetry",gold}));
@@ -162,6 +166,10 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
       if(!runtimeAvailable)throw new Error("DLL 不支持运行时控制，请更新原生组件并重启游戏");
       validateRuntimeRequest(request);
       return databaseRpc.request(request);
+    },
+    async textTranslation(action,dictionary) {
+      if(!textAvailable)throw new Error('DLL 不支持文本翻译，请更新原生组件并重启游戏');
+      return transferText(action,dictionary);
     },
     selectGoldSource(target){if(!goldMonitor)throw new Error("数据库监测未就绪");goldMonitor.select(target);},
     refreshTelemetry(){goldMonitor?.refresh();},

@@ -1,4 +1,5 @@
 import type { GameEngineAdapter } from "@/game/types";
+import { createWolfTextTranslation } from "./wolfTextTranslation";
 import {createWolfCollections} from "./wolfCollections";
 import {withVariableNames} from "./wolfVariables";
 import type {GameDatabaseAccess} from "@/game/database";
@@ -30,7 +31,7 @@ export function createWolfAdapter(sessionId?:string):GameEngineAdapter {
     read:request=>window.electronAPI.readGameDatabase(sessionId,request),
     selectGoldSource:target=>window.electronAPI.selectGameGoldSource(sessionId,target),
   }:undefined;
-  return {...wolfAdapter,sessionId,runtime:runtime && database ? withVariableNames(runtime,database) : runtime,setGameGold:async(value,expectation)=>{
+  return {...wolfAdapter,sessionId,textTranslation:createWolfTextTranslation(sessionId),runtime:runtime && database ? withVariableNames(runtime,database) : runtime,setGameGold:async(value,expectation)=>{
     if(!sessionId||!expectation)throw new Error("金币来源未就绪");
     await window.electronAPI.setGameGold(sessionId,value,expectation);
   },database,collections:database?createWolfCollections(database,(target,expected,value)=>window.electronAPI.setGameInventoryCount(sessionId!,target,expected,value)):undefined};

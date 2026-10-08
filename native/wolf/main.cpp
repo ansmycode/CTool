@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "database_reader.h"
 #include "runtime_control.h"
+#include "text_hook.h"
 #include <sstream>
 
 static std::wstring env(const wchar_t* name) {
@@ -41,12 +42,13 @@ static DWORD WINAPI bootstrap(void*) {
   if (pipe == INVALID_HANDLE_VALUE) return 2;
   const std::string base = "\"protocolVersion\":1,\"sessionId\":\"" + session +
     "\",\"nonce\":\"" + nonce + "\",\"pid\":" + std::to_string(GetCurrentProcessId());
-  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"goldWriteProtocol\":1,\"inventoryWriteProtocol\":1,\"runtimeProtocol\":1,\"capabilities\":[]}")) {
+  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"goldWriteProtocol\":1,\"inventoryWriteProtocol\":1,\"runtimeProtocol\":1,\"textProtocol\":1,\"capabilities\":[]}")) {
     CloseHandle(pipe); return 3;
   }
   wolf::DatabaseReader reader;
   reader.locate();
   wolf::RuntimeControl runtime;
+  wolf::text::TextControl text;
   std::string pending;ULONGLONG lastHeartbeat=0;bool alive=true;
   while (alive) {
     if(GetTickCount64()-lastHeartbeat>=1000){
@@ -55,20 +57,22 @@ static DWORD WINAPI bootstrap(void*) {
     }
     DWORD available=0;
     if(!PeekNamedPipe(pipe,nullptr,0,nullptr,&available,nullptr))break;
-    if(available){char buffer[1024];DWORD got=0;
-      if(!ReadFile(pipe,buffer,(std::min)(available,1024ul),&got,nullptr)||!got)break;
-      pending.append(buffer,got);if(pending.size()>4096)break;
+    if(available){char buffer[65536];DWORD got=0;
+      if(!ReadFile(pipe,buffer,(std::min)(available,65536ul),&got,nullptr)||!got)break;
+      pending.append(buffer,got);if(pending.size()>131072)break;
     }
     unsigned processed=0;
     while(pending.size()>=4&&processed++<4){
       uint32_t length=0;memcpy(&length,pending.data(),4);
-      if(!length||length>256){alive=false;break;}if(pending.size()<length+4)break;
+      if(!length||length>65536){alive=false;break;}if(pending.size()<length+4)break;
       std::istringstream input(pending.substr(4,length));pending.erase(0,length+4);
       std::string op,extra;uint64_t id=0,kind=0,t=0,start=0,limit=0,fs=0,fl=0;input>>op>>id;
+      if(length>256&&op!="textchunk"){alive=false;break;}
       if(!id||id>2147483647){alive=false;break;}
       std::string payload;
       try {
-        if(op=="catalog"){
+        if(op.rfind("text",0)==0){payload=text.command(op,input);}
+        else if(op=="catalog"){
           if(!(input>>kind>>start>>limit)||input>>extra||kind>2||start>4096||limit>8)throw std::runtime_error("invalid_request");
           payload=reader.catalog(static_cast<uint32_t>(kind),static_cast<uint32_t>(start),static_cast<uint32_t>(limit));
         } else if(op=="page"){
@@ -89,6 +93,7 @@ static DWORD WINAPI bootstrap(void*) {
     Sleep(100);
   }
   try{runtime.reset();}catch(const std::exception&){} // DLL remains resident; clocks continue at 1x.
+  text.reset();
   CloseHandle(pipe);
   return 0;
 }
