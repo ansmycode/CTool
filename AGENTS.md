@@ -8,7 +8,7 @@
 
 CTool 是一个仅面向 Windows 的 Electron 桌面工具，用于识别并启动 RPG Maker MV / MZ 游戏。它会以 RPG Maker 插件的方式临时注入本地脚本，让 React 界面通过 localhost 读取和修改运行中的游戏数据；同时提供文本提取、实时翻译、数据内嵌翻译、备份还原和 AI 批量翻译。
 
-完整游戏功能目前支持 RPG Maker MV / MZ；Wolf 已实现 x86 识别、原生启动、DLL 双向通信、金币修改及基本系统已分配道具/武器/防具数量修改，启动不受哈希白名单限制。MY 金币双向修改已由用户验收；三项道具库存已通过只读探针对照用户报告。库存写入仅限已存在的数量行，尚不创建缺失记录；其他游戏布局仍待验证；尚无角色修改、文本采集或翻译 Hook。原始数据库浏览仅保留 DEV 入口。
+完整游戏功能目前支持 RPG Maker MV / MZ；Wolf 已实现 x86 识别、原生启动、DLL 双向通信、金币修改及基本系统已分配道具/武器/防具数量修改，启动不受哈希白名单限制。MY 金币双向修改已由用户验收；三项道具库存已通过只读探针对照用户报告。库存写入仅限已存在的数量行，尚不创建缺失记录；其他游戏布局仍待验证；尚无角色修改；文本提取和首版翻译 Hook 已落地，Hook 真实显示效果待用户验收。原始数据库浏览仅保留 DEV 入口。
 
 Wolf 完整设计见 [适配方案](docs/WOLF_IMPLEMENTATION_PLAN.md)，实际落地范围、构建方式和样本测试记录见 [P0/P1 状态](docs/WOLF_P1_STATUS.md)。先区分已实现与后续计划。
 
@@ -22,7 +22,17 @@ CheatMenu 固定窗口尺寸且页面不允许整体滚动，功能块与主要�
 
 ## 运行架构
 
+2026-10-08 状态：Wolf 翻译当前为阶段性实现，用户确认基础翻译仍有技术问题，功能尚不完善，后续再解决。离线／自建测试通过不代表真实游戏翻译效果已验收；不得宣称 Wolf 翻译已完整可用。
+
+AI 任务由主进程按源 JSON 路径互斥管理，页面刷新不代表任务结束。`ai-translation:task-status` 返回任务状态和已落盘进度；翻译页面选择文件后定时同步，并提供 `ai-translation:stop`。停止使用 AbortSignal 中断请求、响应读取、节流和重试等待，等待工作线程收束后释放锁；写入前检查取消信号，迟到响应不能覆盖续译结果。断点续译保留已完成项，仅处理未翻译／错误项；不得靠直接清锁并发启动第二份任务。
+
+Wolf 独立翻译页 `src/ui/CheatMenu/wolf/translation/WolfTranslationPage.tsx` 已接入文件文本提取和通用 JSON AI 翻译。入口 `adapter.textTranslation` → `game:wolf-text-extract` → `wolfTextService.js` → `src/engine/wolf/text/cache.js` → Worker 线程中的 JS `fileParser.js`（参考 WolfTL 格式读取逻辑，保留许可证；无需原生构建）。扫描 Data 中 MPS／DAT；数据库依赖同名 project。首次临时目录内完成解析、导出后改名为 `.ctool-cache/wolf-text`，同时保留 `parsed/` 可读文本结构、来源索引和 `CatToolTranslate.json`。再次提取只读缓存并重写纯净 JSON，不检测原文件变化；用户删除缓存后才重建。未知 DAT 明确列出，已识别文件解析失败不生成正式缓存。不支持资源包解包、Pro／加密输入。语义筛选在 `extractText.js`，当前收对白／选项、122/SetString 字符串赋值（含自定义对话公共事件的输入，排除明显资源路径）、名称说明类数据库字符串、用語設定表、角色名/称号、210 公共事件的字符串实参（排除目标名和明显资源路径）、150 文字图片的文本参数、标题等，按下文规则去除控制符后导出。JS 合成文件检查和 Nemoriar 样本离线提取对照通过，游戏端到端仍由用户验收。译文加载已接入首版 DLL Hook，内嵌仍禁用。加载选择纯净译文 JSON，经会话 IPC → wolfDriver → 分批十六进制长度帧 → DLL 暂存字典，完成后原子切换。卸载和断连清空字典，原文在对象下一次绘制时恢复；不后台解引用旧对象指针。不设独立 Hook 按钮。Hook 入口 `native/wolf/text_hook.h`，字典 `text_dictionary.h`、编码/清洗 `text_format.h`、运行时分段匹配 `text_matcher.h`；只启用通过 draw/reset/assign 联合特征验证的 x86 布局。Nemoriar 已做静态定位和自建 ABI/替换测试，真实显示效果仍待用户验收。UTF-8 支持中文；Shift-JIS 无法表示的译文拒绝加载，字体兼容和文件写回尚未实现。
+
+Wolf 纯净 JSON 按真实 LF／CRLF／CR 换行拆分，再复用 MV/MZ 控制符正则（公共模块 `src/engine/text/cleanText.js`），去除控制符／标签和行首尾空白，过滤空／无效条目并按清洗后显示文本去重。key/value 都不能保留控制符。DLL Hook 在内部绘制入口取得文本；普通 x86 布局的文本已可能包含 01 开头的二进制控制包。先按字节分离控制包，再解码可见文本查纯净字典，避免把参数当作 UTF-8 或换行。命中时仅替换文本片段，原始控制包、字面控制符、换行和首尾空白保留。句中控制符两侧分别精确匹配；只有整句译文而缺少片段译文时不猜测控制符在译文中的位置，未命中片段保留。对象被游戏重置后会重新应用译文，稳定帧不重置绘制进度。用户报告旧版仅标题三个按钮命中；上述修复已通过自建回归和样本静态定位，真实覆盖率及动态变量展开仍待用户验证。parsed 仅为追溯保留完整原文；`text-locations.json` 的行号及 UTF-16 start/end（end 不含）定位原始行，不是纯净文本的直接回填范围。修改筛选后直接从已有缓存重新导出。
+
 项目有两条不要混淆的通信链路。
+
+Wolf 文本提取缓存约定（已落地）：只读取普通 Wolf 游戏目录中已有的独立 `.mps/.dat` 等数据文件，不提供资源包解包或封装游戏还原，暂不兼容 Wolf Pro。先确认文件格式，按需处理文件内部解密/解压，再解析成可读中间 JSON。正式缓存使用游戏目录下 `.ctool-cache/wolf-text/`；首次转换先写独立临时目录，全部成功后才改名为正式缓存目录，失败或中断留下的临时目录不得作为缓存读取。后续只判断正式目录存在就直接读取中间数据，无需额外完成标记。不检测源文件变动、不自动重建已有正式缓存；页面常驻小提示，重新解析由用户手动删除正式缓存后再次提取。筛选结果输出为纯净 JSON。
 
 ### 1. 桌面端与游戏启动链路
 
@@ -79,6 +89,8 @@ WolfCheatMenu 页面
 
 ## 主要目录
 
+Wolf 翻译范围见本地 [翻译计划书](docs/WOLF_TRANSLATION_PLAN.md)。整个工具的翻译层脑图与节点扩展入口见 [翻译层脑图](docs/TRANSLATION_ARCHITECTURE.md)。解析缓存不是完整工程；AI 工作文件和译文默认与输入 JSON 同目录，删除缓存前可先另存译文。
+
 修改器界面按 `src/ui/CheatMenu/mvmz/`、`wolf/`、`shared/` 分类；根目录仅保留引擎分流与公共布局。MV/MZ 页面在 `mvmz/pages/`，Wolf 分为 `base/`、`inventory/`、`variables/`，无引擎语义的组件与 Hook 放 `shared/`。完整导航见 [CheatMenu 目录说明](src/ui/CheatMenu/README.md)。
 
 2026-09-14 库存展示规则更新：已注册定义为主表，成功读取且映射明确的背包按 ID 覆盖数量；缺少持有记录显示 0，读取失败/未确认映射保持不可用。显示 0 不会创建游戏记录，也不代表存在可写地址。MV/MZ 使用 `InventoryTable`；Wolf 使用独立 `WolfInventoryTable` 与动态 collections 编排，仅复用搜索、滚动和草稿值等无业务语义的基础组件。
@@ -120,6 +132,8 @@ tool_data/              打包时随应用分发的工具数据
 | 修改游戏选择、文件操作或系统能力 | `src/electron/preload.js`、`src/global.d.ts`、`src/electron/ipc/registerIpcHandlers.js`、对应 service |
 | 修改注入与退出清理 | `src/electron/services/gameSessionService.js`、`src/electron/engines/*`、`src/engine/mvmz/*`、`tests/injection/*`、`tests/wolf/*` |
 | 修改文本提取或内嵌翻译 | `src/electron/services/translationService.js`、`translationEngineAdapters.js`、`gameDataBackupService.js`、`src/engine/mvmz/extract.js` |
+| 修改 Wolf 运行时翻译 | `native/wolf/text_hook.h`、`text_dictionary.h`、`src/electron/wolf/translationDictionary.js`、`textProtocol.js`、`wolfDriver.js`、`tests/wolf/textTranslation.test.js`、`native/tests/text_test.cpp` |
+| 修改 Wolf 文件提取 | `src/electron/services/wolfTextService.js`、`src/engine/wolf/text/*`、`tests/wolf/text*.test.js` |
 | 修改 AI 批量翻译 | `src/ui/AITranslation/*`、`src/electron/ai/*`、`src/types/AITranslation.ts`、`tests/ai/*` |
 | 修改全局快捷键 | `src/game/shortcut*`、`src/electron/services/globalShortcutService.js`、`src/ui/CheatMenu/mvmz/pages/shortcuts/*` |
 | 修改开发假游戏预览 | `src/dev/*`、`src/ui/App.tsx` |
