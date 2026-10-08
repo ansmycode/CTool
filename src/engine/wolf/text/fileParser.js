@@ -1,4 +1,4 @@
-// Read-only JS port of the WolfTL format readers; see THIRD-PARTY-NOTICES.txt.
+// Read-only JS port of the WolfTL format readers; see README.md.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { BinaryReader } from './binaryReader.js';

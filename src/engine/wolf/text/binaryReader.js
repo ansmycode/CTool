@@ -1,4 +1,4 @@
-// WolfTL-compatible read-only binary primitives. See THIRD-PARTY-NOTICES.txt.
+// WolfTL-compatible read-only binary primitives. See README.md.
 export class BinaryReader {
   constructor(buffer, encoding = 'shift_jis') { this.buffer = buffer; this.offset = 0; this.encoding = encoding; }
   fail(message) { throw new Error(`${message}（偏移 0x${this.offset.toString(16)}）`); }

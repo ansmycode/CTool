@@ -11,4 +11,35 @@
 MapTree、MapTreeOpenStatus、TileSetData 暂不提取，结果中分别说明用途，不误报为缺少 project。
 解析输出只保留文本相关结构，不是可完整回写的游戏工程；不支持资源包解包、Pro 或加密文件。
 
-格式读取逻辑移植参考 WolfTL 固定版本，来源和 MIT 许可见 `THIRD-PARTY-NOTICES.txt`。
+当前解析器为历史上的 WolfTL JavaScript 移植实现，尚未完成自主实现替换。原独立声明文件已移除，其来源和许可合并保留于下文。
+
+## 历史实现来源与许可
+
+Wolf file format readers ported from Sinflower/WolfTL
+https://github.com/Sinflower/WolfTL
+Commit: bfc38fc2735ab4f7f7ddbec8d57b7fef65f0712f
+Upstream header notices also credit Copyright (c) 2025 and 2026 Sinflower.
+Upstream credits https://github.com/elizagamedev/wolftrans for parsing design.
+CTool: read-only JavaScript port; no archive extraction, encryption or file writing.
+
+MIT License
+
+Copyright (c) 2024 Sinflower
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
