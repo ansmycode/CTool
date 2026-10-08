@@ -12,6 +12,7 @@ import {
   Row,
   Select,
   Space,
+  Switch,
   Typography,
 } from "antd";
 import type {
@@ -20,7 +21,8 @@ import type {
   AITranslationFormValues,
   AITranslationTaskStatus,
 } from "@/types/AITranslation";
-import { AI_PROVIDER_PRESETS, LANGUAGE_OPTIONS } from "./providerPresets";
+import { AI_PROVIDER_PRESETS, AI_PROTOCOL_OPTIONS, LANGUAGE_OPTIONS } from "./providerPresets";
+import { isLocalAIAddress, validateAIBaseUrl } from '@/shared/aiProviders.js';
 import { AI_TRANSLATION_SETTING_FIELDS, DEFAULT_AI_TRANSLATION_SETTINGS, normalizeAITranslationSettings } from "@/shared/aiTranslationSettings.js";
 import "./index.css";
 
@@ -28,9 +30,6 @@ type InteractionMessage = {
   type: "info" | "success" | "warning" | "error";
   text: string;
 } | null;
-
-const isLocalAddress = (hostname: string) =>
-  hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 
 const AITranslation: React.FC = () => {
   const [form] = Form.useForm<AITranslationFormValues>();
@@ -80,15 +79,17 @@ const AITranslation: React.FC = () => {
     [provider],
   );
 
-  const hasRequiredValues = Boolean(
-    selectedFile?.filePath &&
+  let localWithoutKey = false;
+  try { localWithoutKey = values?.provider === 'custom' && isLocalAIAddress(new URL(values.baseUrl).hostname); } catch { /* Incomplete URL while editing. */ }
+  const hasConfigurationValues = Boolean(
       values?.baseUrl?.trim() &&
-      values?.apiKey?.trim() &&
+      (values?.apiKey?.trim() || localWithoutKey) &&
       values?.model?.trim() &&
       values?.sourceLanguage &&
       values?.targetLanguage &&
       values.sourceLanguage !== values.targetLanguage,
   );
+  const hasRequiredValues = Boolean(selectedFile?.filePath && hasConfigurationValues);
 
   const handleProviderChange = (providerId: AIProviderId) => {
     const nextPreset = AI_PROVIDER_PRESETS.find(
@@ -99,6 +100,8 @@ const AITranslation: React.FC = () => {
     form.setFieldsValue({
       baseUrl: nextPreset.baseUrl,
       model: nextPreset.models[0]?.value ?? "",
+      protocol: nextPreset.protocol,
+      jsonMode: nextPreset.jsonMode,
       apiKey: "",
     });
     setMessage({
@@ -134,7 +137,7 @@ const AITranslation: React.FC = () => {
     }
   };
 
-  const validateConfiguration = async () => {
+  const validateConfiguration = async (requireFile = true) => {
     try {
       await form.validateFields();
     } catch (error) {
@@ -142,19 +145,19 @@ const AITranslation: React.FC = () => {
       if (fields?.some(field => field.name[0] === "execution")) setAdvancedOpen(true);
       throw new Error(fields?.[0]?.errors[0] ?? "请检查当前配置。");
     }
-    if (!selectedFile) throw new Error("请先选择原始 JSON 文件。");
+    if (requireFile && !selectedFile) throw new Error("请先选择原始 JSON 文件。");
   };
 
   const handleTestConnection = async () => {
     try {
-      await validateConfiguration();
+      await validateConfiguration(false);
       setIsTestingConnection(true);
       setMessage({ type: "info", text: "正在连接 AI 服务…" });
       const config = form.getFieldsValue(true) as AITranslationFormValues;
       const result = await window.electronAPI.testAITranslationConnection(config);
       setMessage({
         type: "success",
-        text: `连接成功：${result.provider === "deepseek" ? "DeepSeek" : "OpenAI"} / ${result.model}`,
+        text: `连接成功：${AI_PROVIDER_PRESETS.find(item => item.value === result.provider)?.label ?? result.provider} / ${result.model}`,
       });
     } catch (error) {
       setMessage({
@@ -228,6 +231,8 @@ const AITranslation: React.FC = () => {
           provider: "openai",
           baseUrl: AI_PROVIDER_PRESETS[0].baseUrl,
           model: AI_PROVIDER_PRESETS[0].models[0]?.value,
+          protocol: AI_PROVIDER_PRESETS[0].protocol,
+          jsonMode: AI_PROVIDER_PRESETS[0].jsonMode,
           sourceLanguage: "日语",
           targetLanguage: "简体中文",
           execution: { ...DEFAULT_AI_TRANSLATION_SETTINGS },
@@ -252,25 +257,29 @@ const AITranslation: React.FC = () => {
             </Button>
           </Space.Compact>
           <Typography.Text type="secondary" className="ai-field-help">
-            工作文件和最终译文将自动保存在原始 JSON 所在目录。
+            {provider === 'custom'
+              ? '本地模型按服务实际模型 ID 填写；工作文件和译文保存在原始 JSON 所在目录。'
+              : '工作文件和最终译文将自动保存在原始 JSON 所在目录。'}
           </Typography.Text>
         </Form.Item>
 
         <Row gutter={[16, 0]}>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item label="服务商" name="provider" rules={[{ required: true }]}>
               <Select
                 size="small"
-                options={AI_PROVIDER_PRESETS.map(({ value, label, disabled }) => ({
-                  value,
-                  label: disabled ? `${label}（暂未接入）` : label,
-                  disabled,
-                }))}
+                options={AI_PROVIDER_PRESETS.map(({ value, label }) => ({ value, label }))}
                 onChange={handleProviderChange}
               />
             </Form.Item>
           </Col>
-          <Col span={16}>
+          <Col span={8}>
+            <Form.Item label="API 协议" name="protocol" rules={[{ required: true, message: '请选择 API 协议' }]}>
+              <Select size="small" options={[...AI_PROTOCOL_OPTIONS]}
+                onChange={() => { form.setFieldValue('jsonMode', false); setMessage(null); }} />
+            </Form.Item>
+          </Col>
+          <Col span={10}>
             <Form.Item
               label="API 地址"
               name="baseUrl"
@@ -279,25 +288,14 @@ const AITranslation: React.FC = () => {
                 {
                   validator: async (_, value: string) => {
                     if (!value) return;
-                    try {
-                      const url = new URL(value);
-                      if (url.protocol !== "https:" && !isLocalAddress(url.hostname)) {
-                        throw new Error("非本地 API 地址必须使用 HTTPS");
-                      }
-                    } catch (error) {
-                      throw new Error(
-                        error instanceof Error && error.message.includes("HTTPS")
-                          ? error.message
-                          : "请输入有效的 API 地址",
-                      );
-                    }
+                    validateAIBaseUrl(value);
                   },
                 },
               ]}
             >
               <Input
                 size="small"
-                placeholder={provider === "custom" ? "请输入兼容接口地址" : "API 地址"}
+                placeholder={provider === "custom" ? "例如 http://127.0.0.1:8080/v1" : "API 基础地址或完整端点"}
                 autoComplete="off"
                 onChange={handleBaseUrlChange}
               />
@@ -310,11 +308,16 @@ const AITranslation: React.FC = () => {
             <Form.Item
               label="API Key"
               name="apiKey"
-              rules={[{ required: true, message: "请输入 API Key" }]}
+              dependencies={['baseUrl', 'provider']}
+              rules={[({ getFieldValue }) => ({ validator: async (_, value) => {
+                let local = false;
+                try { local = getFieldValue('provider') === 'custom' && isLocalAIAddress(new URL(getFieldValue('baseUrl')).hostname); } catch { /* URL validated separately. */ }
+                if (!local && !value?.trim()) throw new Error('请输入 API Key');
+              } })]}
             >
               <Input.Password
                 size="small"
-                placeholder="仅在本次运行期间使用"
+                placeholder={localWithoutKey ? '本地服务未启用鉴权时可留空' : '仅在本次运行期间使用'}
                 autoComplete="new-password"
                 onChange={() => setMessage(null)}
               />
@@ -412,6 +415,10 @@ const AITranslation: React.FC = () => {
                   </Col>
                 ))}
               </Row>
+          <Form.Item name="jsonMode" label="JSON 输出约束" valuePropName="checked"
+            tooltip="OpenAI 协议可发送 JSON 格式参数；本地模型或中转站不支持时关闭，仍会校验译文 JSON。Anthropic 使用提示词约束。">
+            <Switch size="small" disabled={values?.protocol === 'anthropic' || isTranslating || isTestingConnection} />
+          </Form.Item>
         </Modal>
 
         {selectedFile?.hasUnfinishedWork && !message && !isTranslating && (
@@ -464,7 +471,7 @@ const AITranslation: React.FC = () => {
               loading={isStopping} onClick={handleStopTranslation}>停止任务</Button>}
             <Button
               size="small"
-              disabled={!hasRequiredValues || isTranslating}
+              disabled={!hasConfigurationValues || isTranslating}
               loading={isTestingConnection}
               onClick={handleTestConnection}
             >

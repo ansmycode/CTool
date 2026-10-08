@@ -19,7 +19,7 @@ export const AI_TRANSLATION_SETTING_FIELDS = Object.freeze(
       max: 10000,
       step: 100,
       precision: 0,
-      defaultValue: 1000,
+      defaultValue: 100,
       unit: "条",
       help: "每个请求最多翻译多少条 JSON 文本，不是文本中的换行数。",
     },

@@ -1,4 +1,5 @@
-export type AIProviderId = "openai" | "deepseek" | "kimi" | "custom";
+import type { AIProviderId, AIProtocol } from '@/shared/aiProviders.js';
+export type { AIProviderId, AIProtocol } from '@/shared/aiProviders.js';
 
 export interface AITranslationFileSelection {
   filePath: string;
@@ -30,6 +31,8 @@ export interface AITranslationPreparation extends AITranslationFileSelection {
 
 export interface AITranslationFormValues {
   provider: AIProviderId;
+  protocol?: AIProtocol;
+  jsonMode?: boolean;
   baseUrl: string;
   apiKey: string;
   model: string;
@@ -42,6 +45,6 @@ export type AITranslationAPIConfig = AITranslationFormValues;
 
 export interface AIConnectionTestResult {
   success: true;
-  provider: "openai" | "deepseek";
+  provider: AIProviderId;
   model: string;
 }

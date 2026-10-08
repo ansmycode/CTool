@@ -20,6 +20,7 @@ function fixture(t) {
 
 test("高级配置拒绝无效范围、类型和小数，缺省值兼容旧调用", () => {
   assert.equal(normalizeAITranslationSettings().concurrency, 3);
+  assert.equal(normalizeAITranslationSettings().maxEntries, 100);
   for (const invalid of [{ concurrency: 0 }, { concurrency: 1.5 }, { maxEntries: "3" }, { maxEntries: 10001 }, { maxCharacters: NaN }, { requestIntervalSeconds: 0.12 }, { requestTimeoutSeconds: 601 }, { maxRetries: -1 }, null]) {
     assert.throws(() => normalizeAITranslationSettings(invalid));
   }

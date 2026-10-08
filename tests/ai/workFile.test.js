@@ -25,7 +25,7 @@ function createTemporarySource() {
   return { directory, sourcePath };
 }
 
-test("500 条 mock 默认按每批 1000 条组成一批", () => {
+test("500 条 mock 默认按每批 100 条组成五批", () => {
   const { directory, sourcePath } = createTemporarySource();
   try {
     assert.equal(inspectAITranslationSource(sourcePath).hasWorkFile, false);
@@ -37,8 +37,8 @@ test("500 条 mock 默认按每批 1000 条组成一批", () => {
 
     const workFile = JSON.parse(fs.readFileSync(prepared.workFilePath, "utf8"));
     const batches = createTranslationBatches(workFile.items);
-    assert.equal(batches.length, 1);
-    assert.equal(batches[0].length, 500);
+    assert.equal(batches.length, 5);
+    assert.deepEqual(batches.map(batch => batch.length), [100, 100, 100, 100, 100]);
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }
