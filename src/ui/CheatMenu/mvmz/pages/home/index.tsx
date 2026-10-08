@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button, InputNumber, Switch, Tooltip, Typography } from "antd";
 import { useGameFeature } from "@/game/GameFeatureContext";
-import "./index.css";
+import "../../../shared/baseFeatures.css";
 
 interface Props {
   handleAchieveVictory: () => void;
@@ -27,8 +27,8 @@ const SettingSwitch: React.FC<SettingSwitchProps> = ({
   onChange,
 }) => {
   const content = (
-    <div className="home-setting-row">
-      <span className="home-setting-copy">
+    <div className="base-setting-row">
+      <span className="base-setting-copy">
         <Typography.Text strong>{title}</Typography.Text>
         <Typography.Text type="secondary">{description}</Typography.Text>
       </span>
@@ -60,7 +60,7 @@ const Home: React.FC<Props> = ({
   }, [rpgGameData]);
 
   return (
-    <div className="home-page">
+    <div className="base-features-page">
       <header className="tool-page-header">
         <div>
           <Typography.Title level={3}>游戏控制台</Typography.Title>
@@ -73,19 +73,19 @@ const Home: React.FC<Props> = ({
         </Button>
       </header>
 
-      <section className="home-section">
-        <div className="tool-section-heading">
+      <section className="base-section">
+        <div className="base-section-heading">
           <div>
             <Typography.Title level={4}>常用数据</Typography.Title>
             <Typography.Text type="secondary">修改后离开输入框即可应用</Typography.Text>
           </div>
         </div>
-        <div className="home-value-grid">
-          <div className="home-value-card">
-            <div className="home-value-content">
+        <div className="base-value-grid">
+          <div className="base-value-card">
+            <div className="base-value-content">
               <Typography.Text>持有金币</Typography.Text>
               <InputNumber
-                className="home-value-input"
+                className="base-value-input"
                 min={0}
                 precision={0}
                 stringMode={false}
@@ -104,11 +104,11 @@ const Home: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="home-value-card">
-            <div className="home-value-content">
+          <div className="base-value-card">
+            <div className="base-value-content">
               <Typography.Text>移动速度</Typography.Text>
               <InputNumber
-                className="home-value-input"
+                className="base-value-input"
                 min={0}
                 precision={0}
                 stringMode={false}
@@ -131,13 +131,13 @@ const Home: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="home-value-card">
-            <div className="home-value-content">
+          <div className="base-value-card">
+            <div className="base-value-content">
               <Tooltip title="不要调的太高!">
                 <Typography.Text>游戏倍率</Typography.Text>
               </Tooltip>
               <InputNumber
-                className="home-value-input"
+                className="base-value-input"
                 min={0.1}
                 max={10}
                 precision={1}
@@ -164,14 +164,14 @@ const Home: React.FC<Props> = ({
         </div>
       </section>
 
-      <section className="home-section">
-        <div className="tool-section-heading">
+      <section className="base-section">
+        <div className="base-section-heading">
           <div>
             <Typography.Title level={4}>游戏设置</Typography.Title>
             <Typography.Text type="secondary">开关会立即发送到当前游戏</Typography.Text>
           </div>
         </div>
-        <div className="home-settings-card">
+        <div className="base-settings-card">
           <SettingSwitch
             title="随机遇敌"
             description="控制地图移动时是否触发战斗"
@@ -208,17 +208,17 @@ const Home: React.FC<Props> = ({
         </div>
       </section>
 
-      <section className="home-section">
-        <div className="tool-section-heading">
+      <section className="base-section">
+        <div className="base-section-heading">
           <div>
             <Typography.Title level={4}>快捷操作</Typography.Title>
             <Typography.Text type="secondary">需要特定游戏状态的即时指令</Typography.Text>
           </div>
         </div>
-        <div className="home-action-grid">
+        <div className="base-action-grid">
           <Tooltip title="需处于战斗状态">
             <Button
-              className="home-action-card"
+              className="base-action-card"
               size="small"
               onClick={handleAchieveVictory}
             >
@@ -227,7 +227,7 @@ const Home: React.FC<Props> = ({
           </Tooltip>
           <Tooltip title="需处于战斗状态">
             <Button
-              className="home-action-card"
+              className="base-action-card"
               size="small"
               danger
               onClick={handleAchieveDefeat}
@@ -237,7 +237,7 @@ const Home: React.FC<Props> = ({
           </Tooltip>
           {/* <Tooltip title="需处于战斗状态">
             <Button
-              className="home-action-card"
+              className="base-action-card"
               size="small"
               onClick={handleEscapeBattle}
             >

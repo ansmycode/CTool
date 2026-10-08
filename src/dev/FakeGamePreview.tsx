@@ -6,6 +6,7 @@ import { createCheatMenuTabs } from "@/ui/CheatMenu/mvmz/tabRegistry";
 import { fakeGameFeatures } from "./fakeGameData";
 import "@/ui/CheatMenu/index.css";
 import "@/ui/Main/index.css";
+import WolfBaseFeaturesPreview from "./WolfBaseFeaturesPreview";
 
 const { Content } = Layout;
 
@@ -81,7 +82,8 @@ export default function FakeGamePreview() {
             <Tabs
               className="cheat-menu-tabs"
               activeKey={activeKey}
-              items={items}
+              items={new URLSearchParams(window.location.search).get('engine') === 'wolf'
+                ? [{ key: '1', label: '基础功能', children: <WolfBaseFeaturesPreview /> }] : items}
               onChange={setActiveKey}
               type="card"
             />

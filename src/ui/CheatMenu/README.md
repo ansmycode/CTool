@@ -27,3 +27,10 @@ CheatMenu/
 Wolf 翻译页复用 `src/ui/AITranslation`。提取按钮经 `src/game/adapters/wolfTextTranslation.ts` 和会话专用 IPC 解析已有 MPS／DAT，把可读结构与纯净 JSON 留在游戏目录 `.ctool-cache/wolf-text`；后续提取只读解析缓存。结果弹窗显示路径、条数和未支持文件。译文加载通过会话 IPC 将纯净字典提交给 DLL 文本 Hook，并提供卸载操作；文件内嵌仍禁用，不设独立 Hook 按钮。页面保持固定窗口内可见，不整体滚动。
 
 新增页面放入对应引擎目录。移动组件后同时检查开发预览、测试的源码路径以及根目录 `AGENTS.md` 和 `docs/` 的相关入口。
+
+## 基础功能页的统一排版
+
+MV/MZ 的 mvmz/pages/home/index.tsx 与 Wolf 的 wolf/base/ 共用 shared/baseFeatures.css。统一标题、常用数值网格、紧凑网格开关与操作区域；只共享样式，不共享引擎数据语义。固定窗口中页面不整体滚动，Wolf 开发诊断及手动金币候选放在 DEV 弹窗。数值提交、范围和能力检测保持各引擎原有逻辑。
+
+开发假游戏预览支持 ?preview=fake-game（MV/MZ）及 ?preview=fake-game&engine=wolf（Wolf）；Wolf 加 &unavailable 可查看未支持功能状态。预览数据与真实游戏及 IPC 隔离。
+排版反馈修正：数值和开关卡片使用 220–280px 网格列宽，按可用宽度换行；单项不跨整行、不拉伸填满页面。Wolf 金币来源详情仅在 DEV 诊断弹窗显示。

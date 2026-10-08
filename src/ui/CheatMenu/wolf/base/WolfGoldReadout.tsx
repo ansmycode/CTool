@@ -8,15 +8,16 @@ export default function WolfGoldReadout({
   gold,
   access,
   onWrite,
+  showDiagnostics = false,
 }: {
   gold?: NonNullable<GameSessionSnapshot["telemetry"]>["gold"];
   access?: GameDatabaseAccess;
   onWrite?: (value: number, expectation: GoldWriteExpectation) => Promise<void>;
+  showDiagnostics?: boolean;
 }) {
-  if (!gold) return null;
+  if (!gold) return <div className="base-value-card"><span>持有金币</span><span className="base-value-note">正在识别，请进入地图或读取存档</span></div>;
   return (
-    <section aria-label="金币监测与修改">
-      <h3>金币</h3>
+    <section className="base-value-card" aria-label="金币监测与修改">
       {gold.status === "available" ? (
         <>
           <WolfGoldEditor
@@ -35,11 +36,11 @@ export default function WolfGoldReadout({
               await onWrite(value, { value: expected, source: gold.source });
             }}
           />
-          <p>
+          <p className="base-value-note">
             更新于 {new Date(gold.observedAt).toLocaleTimeString()} · 切回工具时同步
           </p>
-          {gold.source && (
-            <p>
+          {import.meta.env.DEV && showDiagnostics && gold.source && (
+            <p className="base-value-note">
               {import.meta.env.DEV ? `来源：${gold.source.label} · ` : ""}
               {gold.source.mode === "auto"
                 ? "基本系统规则识别（请核对游戏菜单）"
@@ -49,13 +50,14 @@ export default function WolfGoldReadout({
         </>
       ) : (
         <>
-          <p>
+          <span>持有金币</span>
+          <p className="base-value-note">
             暂未读取到金币：请进入地图或读取存档；也可能是此游戏的数据结构尚不支持。
           </p>
           {import.meta.env.DEV && <small>诊断：{gold.reason}</small>}
         </>
       )}
-      {import.meta.env.DEV && access && (
+      {import.meta.env.DEV && showDiagnostics && access && (
         <Space wrap>
           {!!gold.candidates?.length && (
             <Select

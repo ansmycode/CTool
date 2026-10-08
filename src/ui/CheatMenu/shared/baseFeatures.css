@@ -1,0 +1,30 @@
+.base-features-page { flex: 1; min-height: 0; padding: 14px 20px; overflow: hidden; background: #f7f8fa; color: #1f1f1f; }
+.base-features-page .tool-page-header { margin-bottom: 16px; }
+.base-features-page .tool-page-header > div:first-child { min-width: 0; }
+.base-features-page .tool-page-header .ant-tag { margin-inline-end: 0; }
+.base-section { max-width: 1040px; margin: 0 auto 14px; }
+.base-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.base-section-heading .ant-typography { margin: 0; }
+.base-section-heading h4.ant-typography { font-size: 14px; }
+.base-section-heading .ant-typography-secondary { font-size: 12px; }
+.base-section-heading > div { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 12px; }
+.base-value-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 280px)); gap: 10px; }
+.base-value-card, .base-setting-row, .base-action-grid { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
+.base-value-card { padding: 12px 14px; min-width: 0; }
+.base-value-content { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.base-value-input, .base-value-content .ant-input-number, .base-value-content .ant-input-number-group-wrapper { width: 100%; }
+.base-value-note { display: block; margin-top: 8px; font-size: 12px; color: #8c8c8c; line-height: 1.5; }
+.base-settings-card { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 280px)); gap: 10px; }
+.base-setting-row { display: flex; align-items: center; gap: 16px; min-width: 0; padding: 12px 14px; }
+.base-setting-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.base-setting-copy .ant-typography-secondary { font-size: 12px; line-height: 1.5; }
+.base-action-grid { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.base-action-card.ant-btn { flex: none; }
+.base-features-page .ant-alert { margin-bottom: 10px; padding: 6px 10px; font-size: 12px; }
+.base-footer { max-width: 1040px; margin: 0 auto; font-size: 12px; color: #8c8c8c; }
+@media (max-height: 650px) {
+  .base-features-page { padding-top: 10px; padding-bottom: 10px; }
+  .base-features-page .tool-page-header { margin-bottom: 10px; }
+  .base-section { margin-bottom: 10px; }
+  .base-setting-row, .base-value-card { padding: 9px 12px; }
+}
