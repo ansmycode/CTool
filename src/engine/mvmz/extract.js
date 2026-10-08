@@ -4,6 +4,7 @@
 */
 import fs from "fs";
 import path from "path";
+import { stripTextControlCodes } from '../text/cleanText.js';
 
 const keysToReplace = [
   "characterName",
@@ -35,20 +36,7 @@ function filterValidText(str) {
   if (lower === "null" || lower === "undefined") return "";
 
   // ===== 通用控制符清洗 =====
-  let cleaned = str
-    // \xxx[...]  \xxx<...>  \xxx{...}  \xxx(...)
-    .replace(/\\[A-Za-z]+[\[\<\{\(][^\]\>\}\)]*[\]\>\}\)]/g, "")
-
-    // 单字符控制符 \. \! \> \< \^
-    .replace(/\\[\.!><\{\}\^]/g, "")
-
-    // 纯标签 <...>
-    .replace(/<[^>]+>/g, "")
-
-    // 兜底：任意 \xxx[...]
-    .replace(/\\[A-Za-z]+\[[^\]]*]/g, "")
-
-    .trim();
+  const cleaned = stripTextControlCodes(str);
 
   if (!cleaned) return "";
   return cleaned;
