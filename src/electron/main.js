@@ -9,6 +9,24 @@ import { saveHistory } from "./services/gameHistoryService.js";
 import { createGlobalShortcutService } from "./services/globalShortcutService.js";
 import { createMainWindow } from "./window/createMainWindow.js";
 
+// Chromium's generic "Network service crashed" line omits the reason/code.
+// Record only process metadata, never request URLs, headers or API keys.
+app.on("child-process-gone", (_event, details) => {
+  if (details.reason === "clean-exit") return;
+  console.error("[electron:child-process-gone]", JSON.stringify({
+    time: new Date().toISOString(),
+    type: details.type,
+    serviceName: details.serviceName,
+    name: details.name,
+    reason: details.reason,
+    exitCode: details.exitCode,
+    exitCodeHex: `0x${(details.exitCode >>> 0).toString(16).padStart(8, "0")}`,
+    electron: process.versions.electron,
+    chromium: process.versions.chrome,
+    uptimeSeconds: Math.round(process.uptime()),
+  }));
+});
+
 let mainWindow;
 const getMainWindow = () => mainWindow;
 const gameSessionService = createGameSessionService({
