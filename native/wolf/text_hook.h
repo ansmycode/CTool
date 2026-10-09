@@ -5,7 +5,7 @@
 #include <sstream>
 
 namespace wolf::text {
-struct Targets {uintptr_t draw=0,reset=0,assign=0;};
+struct Targets {uintptr_t draw=0,reset=0,assign=0,measureUnit=0;};
 inline bool matches(uintptr_t address,const std::vector<int>& pattern) {
   std::vector<unsigned char> bytes(pattern.size());if(!read(address,bytes.data(),bytes.size()))return false;
   for(size_t i=0;i<bytes.size();i++)if(pattern[i]>=0&&pattern[i]!=bytes[i])return false;return true;
@@ -27,6 +27,14 @@ inline Targets locate(const CodeImage& image) {
   bool linked=false;
   for(size_t n=80;n<190;n++)if(matches(t.draw+n,{0x8b,0xcf,0xe8,-1,-1,-1,-1})&&callTarget(image,t.draw+n+2)==t.reset)linked=true;
   if(!linked)throw std::runtime_error("text_reset_not_linked");
+  // Validate the engine's non-drawing layout pass as well. It calls the same
+  // routine with ECX=this, XMM2/XMM3=1, flag=0 and a stack double of zero.
+  const auto measureCaller=image.unique({0xf2,0x0f,0x10,0x15,-1,-1,-1,-1,0x83,0xec,8,
+    0x0f,0x57,0xc0,0x0f,0x28,0xda,0x8b,0xce,0xf2,0x0f,0x11,4,0x24,0x6a,0,0xe8,-1,-1,-1,-1});
+  uint32_t unitAddress=0;
+  if(callTarget(image,measureCaller+26)!=t.draw||!get(measureCaller+4,unitAddress))
+    throw std::runtime_error("text_measure_layout_unsupported");
+  t.measureUnit=unitAddress;
   t.assign=callTarget(image,t.reset+29);
   if(!matches(t.assign,{0x51,0x53,0x8b,0x5c,0x24,0x10,0x55,0x56,0x8b,0xf1,0x57,0x8b,0x6e,0x14,0x3b,0xdd})||
      !matches(t.assign+0x30,{0x8b,0xc6,0x5f,0x5e,0x5d,0x5b,0x59,0xc2,8,0}))throw std::runtime_error("text_assign_layout_unsupported");
@@ -40,6 +48,7 @@ inline std::string rawString(uintptr_t object) {
 inline DictionaryStore dictionary;
 inline Targets targets;
 inline void* original=nullptr;
+inline void (*refreshLayout)(void*)=nullptr;
 inline std::atomic<bool> faulted{false};
 inline std::atomic<uint32_t> replacements{0};
 struct Seen {std::string source,translation;uint64_t revision;};
@@ -64,13 +73,23 @@ inline void process(void* object) noexcept {
     if(hit) {
       // Refuse extra tracked objects rather than retaining unbounded pointers.
       if(found!=seen.end()||seen.size()<4096) {
-        if(current!=bytes||previous!=source){reinterpret_cast<Reset>(targets.reset)(object);reinterpret_cast<Assign>(targets.assign)(object,bytes.data(),bytes.size());replacements++;}
+        if(current!=bytes||previous!=source||(found!=seen.end()&&found->second.revision!=snapshot->revision)){
+          reinterpret_cast<Reset>(targets.reset)(object);
+          reinterpret_cast<Assign>(targets.assign)(object,bytes.data(),bytes.size());
+          // Rebuild translated line widths before the first visible draw uses
+          // them for alignment. Run only on this live object's game-thread call.
+          if(refreshLayout)refreshLayout(object);
+          replacements++;
+        }
         seen[address]={source,bytes,snapshot->revision};
       }
     } else if(found!=seen.end()) {
       // Restore only on this object's own game-thread draw, never from the pipe
       // worker and never by dereferencing an old cached object address.
-      if(current==found->second.translation&&source==found->second.source)reinterpret_cast<Reset>(targets.reset)(object);
+      if(current==found->second.translation&&source==found->second.source){
+        reinterpret_cast<Reset>(targets.reset)(object);
+        if(refreshLayout)refreshLayout(object);
+      }
       seen.erase(found);
     }
   } catch(const std::exception&) { /* Invalid/unsupported strings pass through. */ }
@@ -78,6 +97,21 @@ inline void process(void* object) noexcept {
 }
 inline void __cdecl visit(void* object) {
   __try {process(object);} __except(EXCEPTION_EXECUTE_HANDLER){faulted=true;}
+}
+inline void measure(void* object) {
+  const double unit=1.0;
+  // The validated flag=0 branch updates layout without drawing. Call the
+  // trampoline directly so this pass cannot re-enter translation processing.
+  __asm {
+    mov ecx, object
+    movsd xmm2, unit
+    movaps xmm3, xmm2
+    sub esp, 8
+    xorps xmm0, xmm0
+    movsd qword ptr [esp], xmm0
+    push 0
+    call dword ptr [original]
+  }
 }
 // The draw function uses a custom x86 ABI (ECX plus XMM2/XMM3 and stack args).
 // Preserve every register, flags and FPU/SSE state; tail-jump to the trampoline
@@ -106,10 +140,14 @@ class TextControl {
   void install() {
     if(faulted)throw std::runtime_error("text_hook_fault_restart_game");
     if(installed_)return;
-    targets=locate(CodeImage{});initializeHooks();
+    targets=locate(CodeImage{});
+    double unit=0;
+    if(!get(targets.measureUnit,unit)||unit!=1.0)throw std::runtime_error("text_measure_scale_unsupported");
+    initializeHooks();
     hookCheck(MH_CreateHook(reinterpret_cast<void*>(targets.draw),reinterpret_cast<void*>(&bridge),&original));
+    refreshLayout=&measure;
     const auto status=MH_EnableHook(reinterpret_cast<void*>(targets.draw));
-    if(status!=MH_OK){MH_RemoveHook(reinterpret_cast<void*>(targets.draw));original=nullptr;hookCheck(status);}
+    if(status!=MH_OK){refreshLayout=nullptr;MH_RemoveHook(reinterpret_cast<void*>(targets.draw));original=nullptr;hookCheck(status);}
     installed_=true;
   }
  public:
