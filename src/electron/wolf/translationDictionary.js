@@ -30,12 +30,16 @@ export function prepareWolfDictionary(data) {
 
 export async function readWolfDictionary(file, gamePath) {
   if ((await fs.stat(file)).size > 32 * 1024 * 1024) throw new Error('译文 JSON 超过 32 MiB');
-  const prepared = prepareWolfDictionary(JSON.parse((await fs.readFile(file, 'utf8')).replace(/^\uFEFF/, '')));
+  return prepareWolfGameDictionary(JSON.parse((await fs.readFile(file, 'utf8')).replace(/^\uFEFF/, '')),gamePath);
+}
+
+export async function prepareWolfGameDictionary(data, gamePath) {
+  const prepared = prepareWolfDictionary(data);
   const handle = await fs.open(path.join(path.dirname(gamePath), 'Data/BasicData/Game.dat'), 'r');
   try {
     const header = Buffer.alloc(10); const {bytesRead} = await handle.read(header, 0, 10, 0);
     if (bytesRead !== 10 || !header.subarray(0, 9).equals(Buffer.from([0, 0x57, 0, 0, 0x4f, 0x4c, 0, 0x46, 0x4d])) || ![0, 0x55].includes(header[9])) throw new Error('无法确认普通 Wolf 文本编码，暂不加载译文');
-    return {...prepared, encoding: header[9] === 0x55 ? 65001 : 932};
+    return {...prepared, encoding: header[9] === 0x55 ? 65001 : 932, sourceData: data};
   } finally { await handle.close(); }
 }
 

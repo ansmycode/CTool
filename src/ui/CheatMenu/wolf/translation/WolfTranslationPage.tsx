@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { message, Button, Modal, Tooltip, Typography } from "antd";
+import { message, Button, Modal, Tooltip, Typography, Alert } from "antd";
+import type { GameSessionSnapshot } from '@/types/GameSession';
 import AITranslation from "@/ui/AITranslation";
 import type { GameTextExtractionResult, GameTextTranslationAccess, GameTextTranslationStatus } from "@/game/textTranslation";
 import "./index.css";
 
-export default function WolfTranslationPage({ access }: { access?: GameTextTranslationAccess }) {
+export default function WolfTranslationPage({ access, restore }: { access?: GameTextTranslationAccess; restore?: GameSessionSnapshot['translationRestore'] }) {
   const [messageApi, messageContext] = message.useMessage();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<GameTextExtractionResult | null>(null);
@@ -14,13 +15,17 @@ export default function WolfTranslationPage({ access }: { access?: GameTextTrans
     let active = true;
     access?.status().then(value => { if (active) setTranslation(value); }).catch(() => {});
     return () => { active = false; };
-  }, [access]);
+  }, [access, restore?.state, restore?.loaded, restore?.message]);
   const load = async (unload = false) => {
     if (!access || busy) return;
     setBusy(true);
     try {
       const value = await (unload ? access.unload() : access.load());
-      if (value) { setTranslation(value); void messageApi.success(unload ? '已卸载译文，文本在后续绘制时恢复' : `已载入 ${value.loaded} 条译文，请在游戏中查看`); }
+      if (value) {
+        setTranslation(value);
+        if(value.persistenceError)void messageApi.warning('当前操作已生效，但自动恢复设置保存失败：'+value.persistenceError);
+        else void messageApi.success(unload ? '已卸载译文并取消下次自动恢复' : `已载入 ${value.loaded} 条译文，后续启动自动恢复`);
+      }
     } catch (error) { void messageApi.error(error instanceof Error ? error.message : '译文加载失败'); }
     finally { setBusy(false); }
   };
@@ -43,12 +48,17 @@ export default function WolfTranslationPage({ access }: { access?: GameTextTrans
           <Typography.Text type="secondary" className="wolf-translation-cache-hint">
             如需重新解析，请删除游戏目录下的 .ctool-cache/wolf-text 文件夹，再提取文本。
           </Typography.Text>
+          <Typography.Text type="secondary" className="wolf-translation-cache-hint">
+            首次选择任意位置的译文 JSON；加载成功后保存独立副本，后续启动自动恢复，原文件改名或移动不影响。
+          </Typography.Text>
         </div>
       </header>
+      {restore?.state==='failed'&&<Alert type="warning" showIcon message={restore.message||'自动恢复译文失败，请重新选择译文'} />}
+      {restore?.state==='loading'&&<Typography.Text type="secondary">正在检查并恢复已保存的译文…</Typography.Text>}
       <div className="wolf-translation-actions">
         {access && Object.entries(access.operations).map(([operation, state]) => (
           <Tooltip key={operation} title={state.reason}>
-            <span><Button size="small" disabled={!state.available || busy} loading={operation === 'extract' && busy}
+            <span><Button size="small" disabled={!state.available || busy || restore?.state==='loading'} loading={operation === 'extract' && busy}
               onClick={operation === 'extract' ? extract : operation === 'load' ? () => load() : undefined}>
               {state.label}{!state.available && '（待接入）'}
             </Button></span>

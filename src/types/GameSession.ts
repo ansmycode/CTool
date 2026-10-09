@@ -12,6 +12,7 @@ export interface DetectedGame {
   profileId?: string;
 }
 export interface GameSessionSnapshot {
+  translationRestore?: { state: 'loading' | 'loaded' | 'failed' | 'none'; loaded?: number; message?: string };
   launchOptions?: GameLaunchOptions;
   runtimeAvailable?: boolean;
   goldWritable?: boolean;

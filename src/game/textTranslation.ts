@@ -1,6 +1,7 @@
 /** Game text integration is separate from engine-independent JSON AI translation. */
 export type GameTextOperation = "extract" | "load" | "embed";
 export interface GameTextTranslationStatus {
+  persistenceError?: string;
   status: 'available';
   loaded: number;
   hooked: boolean;

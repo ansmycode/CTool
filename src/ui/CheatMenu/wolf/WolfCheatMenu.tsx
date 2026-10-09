@@ -146,7 +146,7 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
       key: "translation",
       label: "翻译",
       className: "tab-pane-fullheight",
-      children: <WolfTranslationPage key={session.sessionId} access={textTranslation} />,
+      children: <WolfTranslationPage key={session.sessionId} access={textTranslation} restore={session.translationRestore} />,
     },
     ...(import.meta.env.DEV && database && DatabaseBrowser
       ? [

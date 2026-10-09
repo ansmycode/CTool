@@ -55,6 +55,8 @@ CheatMenu 固定窗口尺寸且页面不允许整体滚动，功能块与主要�
 
 ## 运行架构
 
+2026-10-09 Wolf 译文持久化：首次由用户选择任意名称/位置的文件，按纯净 JSON 内容校验并加载成功后，在该游戏 `.ctool-cache/wolf-translation/dictionary.json` 原子保存独立副本和 Game.dat SHA-256 绑定；内部文件名是存储位置，不是外部译文识别规则。原文件移动/改名和删除文本解析缓存不影响副本。入口 `src/electron/wolf/translationPersistence.js`，由 gameSessionService 在 DLL connected 后每会话恢复一次；与手动加载/卸载互斥，文件读写跨会话串行，退出或旧会话结果不能加载到新游戏。恢复重新检查内容、编码和绑定，错误仅记录 translationRestore 并提示，不终止游戏、不循环重试。成功卸载删除副本，取消下次恢复；磁盘保存/删除失败提示当前操作已生效但持久化失败。状态变更经会话快照展示；Wolf 已就绪的 degraded 会话发布恢复/金币状态不应注销可用快捷键。首次外部文件仍由用户指定，不扫描任意目录，也不因文件名猜测译文归属。该功能不改变 Wolf 翻译尚未完善的验收边界。
+
 2026-10-09 Wolf 启动字体：`src/ui/Main/index.tsx` 在识别支持的游戏后提供“原游戏字体／Noto Sans CJK SC”选择，历史启动先回到该页；仅启动前可选，CheatMenu 不提供字体修改。`game:launch` 携带 `launchOptions.fontId`，`gameSessionService` 验证只允许内置 ID，MV/MZ 通过 inject/font.js 加载同一字体；按实际 www/js 或 js 布局临时复制到 fonts/.ctool-*，保留游戏原字体，正常退出清理本次资源。MV 使用 Graphics.loadFont，MZ 使用 FontManager.load；Scene_Boot 等待字体，窗口和 Bitmap 测量/绘制统一使用工具字体。字体插件未提供运行时修改接口。`src/electron/wolf/launchFont.js` 校验资源 SHA-256，`wolfDriver` 传给 injector 可选第五参数；DLL 在游戏入口点恢复前完成 FR_PRIVATE 加载、物理字体验证和 GDI 创建 API Hook，经成功/失败事件门控启动。`native/wolf/font_override.h` 覆盖动态解析的 CreateFontA/W 及 indirect/ex 入口，仅替换游戏主程序调用的字体名，保留度量/样式/字符集，跳过 SYMBOL 图标字体与外部 DLL 调用。字体持续至游戏退出，断连不恢复，未暴露运行时修改协议。原始字体及 OFL 许可证在 `tool_data/fonts/` 随包分发，该目录加入版本管理，其他 tool_data 仍忽略。字体不能解决 Shift-JIS 编码、图片文字、过长译文或固定文本框；真实游戏布局待验收。原生字体测试由 `test:native:unit` 执行，启动烟测可加 `--font`，详见 native/README.md 与知识库字体方案。
 
 2026-10-08 状态：Wolf 翻译当前为阶段性实现，用户确认基础翻译仍有技术问题，功能尚不完善，后续再解决。离线／自建测试通过不代表真实游戏翻译效果已验收；不得宣称 Wolf 翻译已完整可用。

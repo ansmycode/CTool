@@ -8,6 +8,7 @@ import { detectGame } from "./services/gameDetectionService.js";
 import { saveHistory } from "./services/gameHistoryService.js";
 import { createGlobalShortcutService } from "./services/globalShortcutService.js";
 import { createMainWindow } from "./window/createMainWindow.js";
+import { createWolfTranslationPersistence } from './wolf/translationPersistence.js';
 
 // Chromium's generic "Network service crashed" line omits the reason/code.
 // Record only process metadata, never request URLs, headers or API keys.
@@ -31,10 +32,13 @@ let mainWindow;
 const getMainWindow = () => mainWindow;
 const gameSessionService = createGameSessionService({
   detect: detectGame, createDriver: createEngineDriver, saveHistory,
+  translationPersistence: createWolfTranslationPersistence(),
   publish: (snapshot) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send("game-session-changed", snapshot);
-      if (snapshot.state !== "ready") globalShortcutService.clear();
+      const shortcutsReady = snapshot.state === 'ready' || (snapshot.game?.engine === 'wolf' &&
+        snapshot.state === 'degraded' && snapshot.runtimeAvailable && snapshot.processState === 'running');
+      if (!shortcutsReady) globalShortcutService.clear();
     }
   },
 });

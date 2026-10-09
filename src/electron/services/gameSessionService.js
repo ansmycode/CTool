@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { validateLaunchOptions } from '../wolf/launchFont.js';
 
 const mvmzCapabilities = ["overview", "items", "armors", "weapons", "variables", "switches", "actors", "translation"];
-export function createGameSessionService({ detect, createDriver, publish, saveHistory = () => {} }) {
+export function createGameSessionService({ detect, createDriver, publish, saveHistory = () => {}, translationPersistence }) {
   let current = null;
   let revision = 0;
   const snapshot = () => current ? structuredClone(current.snapshot) : null;
@@ -10,6 +10,22 @@ export function createGameSessionService({ detect, createDriver, publish, saveHi
     if (current !== entry || entry.finalized) return;
     entry.snapshot = { ...entry.snapshot, ...patch, revision: ++revision };
     publish(snapshot());
+  };
+  const translationCurrent = entry => current===entry && !entry.finalized && !entry.finishing &&
+    entry.snapshot.state==='degraded' && entry.snapshot.processState==='running';
+  const restoreTranslation = async entry => {
+    if(!translationPersistence||entry.snapshot.game?.engine!=='wolf'||entry.restoreAttempted)return;
+    entry.restoreAttempted=true;entry.translationBusy=true;
+    update(entry,{translationRestore:{state:'loading'}});
+    try {
+      const dictionary=await translationPersistence.read(entry.snapshot.game.gamePath);
+      if(!translationCurrent(entry))return;
+      if(!dictionary){update(entry,{translationRestore:{state:'none'}});return;}
+      const result=await entry.driver.textTranslation('load',dictionary);
+      if(translationCurrent(entry))update(entry,{translationRestore:{state:'loaded',loaded:result.loaded}});
+    }catch(error){
+      if(translationCurrent(entry))update(entry,{translationRestore:{state:'failed',message:error.message}});
+    }finally{entry.translationBusy=false;}
   };
   const finish = async (entry) => {
     if (current !== entry || entry.finalized || entry.finishing) return;
@@ -46,6 +62,7 @@ export function createGameSessionService({ detect, createDriver, publish, saveHi
               if (entry.snapshot.state === "connecting") update(entry, { state: "initializing", message: "DLL 已加载，等待握手" });
             } else if (event.type === "connected") {
               update(entry, { state: "degraded", capabilities: [],databaseReadOnly:!!event.databaseReadOnly,goldWritable:!!event.goldWritable,inventoryWritable:!!event.inventoryWritable,runtimeAvailable:!!event.runtimeAvailable, message: event.message });
+              void restoreTranslation(entry);
             } else if (event.type === "telemetry") {
               if (entry.snapshot.state === "degraded" && entry.snapshot.processState === "running")
                 update(entry, { telemetry: { gold: event.gold } });
@@ -92,9 +109,29 @@ export function createGameSessionService({ detect, createDriver, publish, saveHi
       if(!entry||entry.finalized||entry.finishing||entry.snapshot.sessionId!==sessionId||
          entry.snapshot.game?.engine!=='wolf'||entry.snapshot.state!=='degraded'||entry.snapshot.processState!=='running'||!entry.driver.textTranslation)
         throw new Error('Wolf 文本翻译会话无效或未就绪');
-      const result=await entry.driver.textTranslation(action,dictionary);
-      if(current!==entry||entry.finalized||entry.finishing||entry.snapshot.state!=='degraded')throw new Error('游戏会话已变化');
-      return result;
+      if(action!=='status'&&entry.translationBusy)throw new Error('译文正在加载或保存，请稍后重试');
+      if(action==='status') {
+        const result=await entry.driver.textTranslation(action);
+        if(!translationCurrent(entry))throw new Error('游戏会话已变化');
+        return result;
+      }
+      entry.translationBusy=true;
+      try {
+        const result=await entry.driver.textTranslation(action,dictionary);
+        if(!translationCurrent(entry))throw new Error('游戏会话已变化');
+        if(translationPersistence){
+          try {
+            if(action==='load')await translationPersistence.save(entry.snapshot.game.gamePath,dictionary);
+            else if(action==='clear')await translationPersistence.remove(entry.snapshot.game.gamePath);
+            if(translationCurrent(entry))update(entry,{translationRestore:{state:action==='load'?'loaded':'none',loaded:result.loaded}});
+          }catch(error){
+            if(translationCurrent(entry))update(entry,{translationRestore:{state:'failed',message:'当前操作已生效，但持久化失败：'+error.message}});
+            return {...result,persistenceError:error.message};
+          }
+        }
+        if(!translationCurrent(entry))throw new Error('游戏会话已变化');
+        return result;
+      }finally{entry.translationBusy=false;}
     },
     selectGoldSource(sessionId,target) {
       if(!current||current.finalized||current.snapshot.sessionId!==sessionId||!current.snapshot.databaseReadOnly||!current.driver.selectGoldSource)

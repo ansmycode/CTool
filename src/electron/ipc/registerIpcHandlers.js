@@ -126,7 +126,7 @@ export function registerIpcHandlers({
   ipcMain.handle('game:wolf-translation-load', async (_event, sessionId) => {
     const before=gameSessionService.snapshot();
     if(before?.sessionId!==sessionId||before?.game?.engine!=='wolf'||before.processState!=='running')throw new Error('Wolf 游戏会话已变化');
-    const choice=await dialog.showOpenDialog(getMainWindow(),{properties:['openFile'],filters:[{name:'译文 JSON',extensions:['json']}]});
+    const choice=await dialog.showOpenDialog(getMainWindow(),{properties:['openFile'],filters:[{name:'译文 JSON',extensions:['json']},{name:'所有文件',extensions:['*']}]});
     if(!choice.filePaths[0])return null;
     const dictionary=await readWolfDictionary(choice.filePaths[0],before.game.gamePath);
     return gameSessionService.wolfTextTranslation(sessionId,'load',dictionary);
