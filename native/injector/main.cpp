@@ -185,14 +185,23 @@ int wmain(int argc, wchar_t** argv) {
   Handle inputEnded(CreateEventW(nullptr,TRUE,FALSE,nullptr)); disconnected=inputEnded.h;
   void* remote=nullptr;
   try {
-    if(argc!=5) throw std::runtime_error("usage: inject-x86.exe game dll session nonce");
+    if(argc!=5 && argc!=6) throw std::runtime_error("usage: inject-x86.exe game dll session nonce [font]");
     const std::wstring game=argv[1], dll=argv[2], session=argv[3], nonce=argv[4];
+    const std::wstring font = argc==6 ? argv[5] : L"";
     for (const auto& value : {session, nonce}) {
       if(value.empty() || value.size()>80 || value.find_first_not_of(L"0123456789abcdef-")!=std::wstring::npos)
         throw std::runtime_error("invalid session identifier");
     }
     validatePE(game,false); validatePE(dll,true);
     const std::wstring pipeName=L"\\\\.\\pipe\\ctool-wolf-"+session+L"-"+nonce;
+    const std::wstring fontReadyName=L"Local\\ctool-wolf-font-ready-"+session+L"-"+nonce;
+    const std::wstring fontFailedName=L"Local\\ctool-wolf-font-failed-"+session+L"-"+nonce;
+    Handle fontReady(font.empty() ? nullptr : CreateEventW(nullptr,TRUE,FALSE,fontReadyName.c_str()));
+    Handle fontFailed(font.empty() ? nullptr : CreateEventW(nullptr,TRUE,FALSE,fontFailedName.c_str()));
+    if (!font.empty()) check(fontReady.h && fontFailed.h,"font_initialization_event");
+    check(SetEnvironmentVariableW(L"CTOOL_WOLF_FONT",font.empty()?nullptr:font.c_str()) &&
+      SetEnvironmentVariableW(L"CTOOL_WOLF_FONT_READY",font.empty()?nullptr:fontReadyName.c_str()) &&
+      SetEnvironmentVariableW(L"CTOOL_WOLF_FONT_FAILED",font.empty()?nullptr:fontFailedName.c_str()),"font_initialization_environment");
     Handle pipe(makePipe(pipeName));
     check(SetEnvironmentVariableW(L"CTOOL_WOLF_PIPE",pipeName.c_str()) &&
       SetEnvironmentVariableW(L"CTOOL_WOLF_SESSION",session.c_str()) &&
@@ -217,6 +226,10 @@ int wmain(int argc, wchar_t** argv) {
     DWORD result=0;
     check(GetExitCodeThread(loader.h,&result) && result!=0,"DLL load");
     VirtualFreeEx(process.hProcess,remote,0,MEM_RELEASE); remote=nullptr;
+    if (!font.empty()) {
+      HANDLE waits[]={fontReady.h,fontFailed.h,process.hProcess};
+      check(WaitForMultipleObjects(3,waits,FALSE,15000)==WAIT_OBJECT_0,"font_initialization_failed");
+    }
     check(ResumeThread(process.hThread)!=static_cast<DWORD>(-1),"resume game"); resumed=true;
     event("injected");
     HANDLE commandPipe=nullptr;

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { validateLaunchOptions } from '../wolf/launchFont.js';
 
 const mvmzCapabilities = ["overview", "items", "armors", "weapons", "variables", "switches", "actors", "translation"];
 export function createGameSessionService({ detect, createDriver, publish, saveHistory = () => {} }) {
@@ -15,14 +16,16 @@ export function createGameSessionService({ detect, createDriver, publish, saveHi
     entry.finishing = true;
     let cleanupError;
     try { await entry.driver?.dispose(); } catch (error) { cleanupError = error.message; }
-    update(entry, { state: "closed", processState: "exited", capabilities: [], telemetry: undefined,databaseReadOnly:false,goldWritable:false,inventoryWritable:false,runtimeAvailable:false,
-      message: cleanupError ? "游戏已退出，但清理失败：" + cleanupError : "游戏已退出" });
+    const failed = entry.snapshot.state === 'failed';
+    update(entry, { state: failed ? 'failed' : "closed", processState: "exited", capabilities: [], telemetry: undefined,databaseReadOnly:false,goldWritable:false,inventoryWritable:false,runtimeAvailable:false,
+      message: failed ? entry.snapshot.message : cleanupError ? "游戏已退出，但清理失败：" + cleanupError : "游戏已退出" });
     entry.finalized = true;
   };
   return {
     snapshot,
-    async launch(exePath) {
+    async launch(exePath, options) {
       if (current && !current.finalized) throw new Error("已有游戏会话，请先关闭当前游戏");
+      const launchOptions = validateLaunchOptions(options);
       const entry = { snapshot: { sessionId: randomUUID(), revision: ++revision,
         state: "launching", processState: "starting", capabilities: [], message: "正在检测游戏" } };
       current = entry; publish(snapshot());
@@ -30,9 +33,10 @@ export function createGameSessionService({ detect, createDriver, publish, saveHi
         const game = await detect(exePath);
         if (!game?.supported) throw new Error(game?.supportMessage || "不支持的游戏");
         entry.snapshot.game = game;
+        entry.snapshot.launchOptions = launchOptions;
         entry.driver = createDriver(game.engine);
         await entry.driver.launch({
-          game, sessionId: entry.snapshot.sessionId,
+          game, sessionId: entry.snapshot.sessionId, launchOptions,
           emit(event) {
             if (current !== entry || entry.finalized || entry.finishing) return;
             if (event.type === "spawned") {

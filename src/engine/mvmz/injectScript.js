@@ -1,5 +1,6 @@
 import { app } from "electron";
 import path from "path";
+import { resolveLaunchFont } from '../../electron/wolf/launchFont.js';
 import {
   cleanupMVMZPlugins,
   injectMVMZPlugins,
@@ -12,8 +13,10 @@ function getInjectDirectory() {
 }
 
 /** 以 RPG Maker MV/MZ 标准插件的方式加载 CTool。 */
-export async function injectMVMZ(gameDir) {
-  return injectMVMZPlugins(gameDir, getInjectDirectory());
+export async function injectMVMZ(gameDir, launchOptions) {
+  const fontDirectory = path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'tool_data', 'fonts');
+  const fontPath = resolveLaunchFont(launchOptions?.fontId, fontDirectory);
+  return injectMVMZPlugins(gameDir, getInjectDirectory(), { fontPath });
 }
 
 export async function cleanupMVMZInjection(session) {

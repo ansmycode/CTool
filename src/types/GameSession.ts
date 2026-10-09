@@ -1,4 +1,5 @@
 import type { EngineType, GameCapability } from "@/game/types";
+export interface GameLaunchOptions { fontId?: 'original' | 'noto-sans-cjk-sc'; }
 export interface DetectedGame {
   gamePath: string;
   title: string;
@@ -11,6 +12,7 @@ export interface DetectedGame {
   profileId?: string;
 }
 export interface GameSessionSnapshot {
+  launchOptions?: GameLaunchOptions;
   runtimeAvailable?: boolean;
   goldWritable?: boolean;
   inventoryWritable?: boolean;

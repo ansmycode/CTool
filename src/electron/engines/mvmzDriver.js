@@ -5,8 +5,8 @@ import { injectMVMZ, cleanupMVMZInjection } from "../../engine/mvmz/injectScript
 export function createMvmzDriver() {
   let injection;
   return {
-    async launch({ game, emit }) {
-      injection = await injectMVMZ(path.dirname(game.gamePath));
+    async launch({ game, emit, launchOptions }) {
+      injection = await injectMVMZ(path.dirname(game.gamePath), launchOptions);
       await new Promise((resolve, reject) => {
         const child = spawn(game.gamePath, [], { cwd: path.dirname(game.gamePath), detached: true });
         child.once("spawn", () => { emit({ type: "spawned", pid: child.pid }); resolve(); });

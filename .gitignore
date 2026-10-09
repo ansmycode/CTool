@@ -35,4 +35,5 @@ agent_work
 *.sw?
 
 #Should be ignored
-tool_data
+tool_data/*
+!tool_data/fonts/

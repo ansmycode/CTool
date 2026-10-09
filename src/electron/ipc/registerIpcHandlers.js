@@ -54,7 +54,7 @@ export function registerIpcHandlers({
     return detectGame(exePath);
   });
 
-  ipcMain.handle("game:launch", async (_event, exePath) => gameSessionService.launch(exePath));
+  ipcMain.handle("game:launch", async (_event, exePath, options) => gameSessionService.launch(exePath, options));
   ipcMain.handle("game:snapshot", () => gameSessionService.snapshot());
   ipcMain.handle("game:database-read", (_event,sessionId,request)=>gameSessionService.readDatabase(sessionId,request));
   ipcMain.handle("game:wolf-runtime", (_event,sessionId,request)=>gameSessionService.runtime(sessionId,request));

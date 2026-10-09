@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   detectEngine: (exePath) => ipcRenderer.invoke("detect-engine", exePath), //判断游戏引擎
-  launchGame: (exePath) => ipcRenderer.invoke("game:launch", exePath),
+  launchGame: (exePath, options) => ipcRenderer.invoke("game:launch", exePath, options),
   getGameSession: () => ipcRenderer.invoke("game:snapshot"),
   readGameDatabase:(sessionId,request)=>ipcRenderer.invoke("game:database-read",sessionId,request),
   wolfRuntime:(sessionId,request)=>ipcRenderer.invoke("game:wolf-runtime",sessionId,request),

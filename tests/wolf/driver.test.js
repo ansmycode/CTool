@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from 'node:url';
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import { createWolfDriver } from "../../src/electron/engines/wolfDriver.js";
@@ -13,6 +14,29 @@ function pe(dll=false) {
   b.write("WOLF RPG Editor",256,"utf16le"); return b;
 }
 const tick = () => new Promise(resolve=>setImmediate(resolve));
+
+test('selected font is resolved by the main process and must be confirmed by the DLL',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'ctool-font-driver-'));
+  try {
+    fs.writeFileSync(path.join(root,'inject-x86.exe'),pe());fs.writeFileSync(path.join(root,'ctool-wolf-x86.dll'),pe(true));
+    for(const confirms of [true,false]) {
+      let args;const events=[];
+      const child=Object.assign(new EventEmitter(),{stdin:new PassThrough(),stdout:new PassThrough(),stderr:new PassThrough()});
+      const driver=createWolfDriver({resourceDirectory:root,fontDirectory:fileURLToPath(new URL('../../tool_data/fonts/',import.meta.url)),
+        spawnProcess:(_exe,input)=>{args=input;queueMicrotask(()=>{
+          child.stdout.write(JSON.stringify({type:'spawned',pid:123})+'\n');
+          child.stdout.write(JSON.stringify({type:'hello',pid:123,protocolVersion:1,sessionId:input[2],nonce:input[3],
+            ...(confirms?{fontProtocol:1,fontId:'noto-sans-cjk-sc'}:{})})+'\n');
+        });return child;}});
+      try {
+        await driver.launch({game:{gamePath:'Game.exe'},sessionId:'font-session',launchOptions:{fontId:'noto-sans-cjk-sc'},emit:e=>events.push(e)});
+        await tick();assert.equal(args.length,5);assert.equal(path.basename(args[4]),'NotoSansCJKsc-Regular.otf');
+        assert.equal(events.some(e=>e.type==='connected'),confirms);
+        if(!confirms)assert.match(events.find(e=>e.type==='error').message,/未确认所选字体/);
+      } finally {await driver.dispose();}
+    }
+  } finally {fs.rmSync(root,{recursive:true,force:true});}
+});
 
 test("runtime handshake enables only semantic commands and detaches on protocol failure",async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"ctool-runtime-driver-"));let driver;

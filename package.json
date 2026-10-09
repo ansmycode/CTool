@@ -87,7 +87,8 @@
         "to": "inject",
         "filter": [
           "cheat.js",
-          "translator.js"
+          "translator.js",
+          "font.js"
         ]
       },
       {

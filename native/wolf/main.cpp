@@ -4,12 +4,16 @@
 #include "database_reader.h"
 #include "runtime_control.h"
 #include "text_hook.h"
+#include "font_override.h"
 #include <sstream>
 
 static std::wstring env(const wchar_t* name) {
-  wchar_t value[256]{};
-  DWORD size = GetEnvironmentVariableW(name, value, 256);
-  return size && size < 256 ? value : L"";
+  const DWORD size = GetEnvironmentVariableW(name, nullptr, 0);
+  if (!size || size > 32768) return L"";
+  std::wstring value(size,L'\0');
+  const DWORD got = GetEnvironmentVariableW(name,value.data(),size);
+  if (!got || got >= size) return L"";
+  value.resize(got); return value;
 }
 static std::string ascii(const std::wstring& s) {
   std::string result;
@@ -28,6 +32,15 @@ static bool sendFrame(HANDLE pipe, const std::string& text) {
     && written == frame.size();
 }
 static DWORD WINAPI bootstrap(void*) {
+  const auto fontPath = env(L"CTOOL_WOLF_FONT");
+  if (!fontPath.empty()) {
+    bool success = false;
+    try { wolf::font::override.initialize(fontPath); success = true; } catch (const std::exception&) {}
+    const auto signal = env(success ? L"CTOOL_WOLF_FONT_READY" : L"CTOOL_WOLF_FONT_FAILED");
+    HANDLE ready = OpenEventW(EVENT_MODIFY_STATE,FALSE,signal.c_str());
+    if (ready) { SetEvent(ready); CloseHandle(ready); }
+    if (!success) return 4;
+  }
   const auto name = env(L"CTOOL_WOLF_PIPE");
   const auto session = ascii(env(L"CTOOL_WOLF_SESSION"));
   const auto nonce = ascii(env(L"CTOOL_WOLF_NONCE"));
@@ -42,7 +55,8 @@ static DWORD WINAPI bootstrap(void*) {
   if (pipe == INVALID_HANDLE_VALUE) return 2;
   const std::string base = "\"protocolVersion\":1,\"sessionId\":\"" + session +
     "\",\"nonce\":\"" + nonce + "\",\"pid\":" + std::to_string(GetCurrentProcessId());
-  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"goldWriteProtocol\":1,\"inventoryWriteProtocol\":1,\"runtimeProtocol\":1,\"textProtocol\":1,\"capabilities\":[]}")) {
+  const std::string fontIdentity = ",\"fontProtocol\":1,\"fontId\":\"" + std::string(fontPath.empty()?"original":"noto-sans-cjk-sc") + "\"";
+  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"goldWriteProtocol\":1,\"inventoryWriteProtocol\":1,\"runtimeProtocol\":1,\"textProtocol\":1,\"capabilities\":[]" + fontIdentity + "}")) {
     CloseHandle(pipe); return 3;
   }
   wolf::DatabaseReader reader;
@@ -52,7 +66,7 @@ static DWORD WINAPI bootstrap(void*) {
   std::string pending;ULONGLONG lastHeartbeat=0;bool alive=true;
   while (alive) {
     if(GetTickCount64()-lastHeartbeat>=1000){
-      if(!sendFrame(pipe,"{"+base+",\"type\":\"heartbeat\"}"))break;
+      if(!sendFrame(pipe,"{"+base+",\"type\":\"heartbeat\",\"fontCreates\":"+std::to_string(wolf::font::creations.load())+"}"))break;
       lastHeartbeat=GetTickCount64();
     }
     DWORD available=0;

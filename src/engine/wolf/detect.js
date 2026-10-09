@@ -47,7 +47,7 @@ export function detectWolf(gamePath) {
     sha256,
     supported,
     supportMessage: supported
-      ? "实验性启动与 DLL 连接；尚无作弊和翻译 Hook"
+      ? undefined
       : "已识别 Wolf；当前仅支持 x86 游戏 EXE，不支持 x64 或 DLL",
   };
 }

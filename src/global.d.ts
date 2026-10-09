@@ -27,7 +27,7 @@ declare global {
     electronAPI: {
       chooseGame: () => Promise<string | null>;
       detectEngine: (exePath: string) => Promise<DetectedGame>;
-      launchGame: (exePath: string) => Promise<GameSessionSnapshot>;
+      launchGame: (exePath: string, options?: import('@/types/GameSession').GameLaunchOptions) => Promise<GameSessionSnapshot>;
       getGameSession: () => Promise<GameSessionSnapshot | null>;
       extractWolfText:(sessionId:string)=>Promise<import("@/game/textTranslation").GameTextExtractionResult>;
       loadWolfTranslation:(sessionId:string)=>Promise<import("@/game/textTranslation").GameTextTranslationStatus|null>;

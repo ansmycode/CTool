@@ -15,6 +15,8 @@ const CTOOL_PLUGINS = Object.freeze([
 ]);
 
 const CTOOL_PLUGIN_NAMES = new Set(CTOOL_PLUGINS.map((plugin) => plugin.name));
+const FONT_PLUGIN = { name: 'CTool_Font', source: 'font.js', description: 'CTool 启动字体支持。' };
+CTOOL_PLUGIN_NAMES.add(FONT_PLUGIN.name);
 const LEGACY_MARKER_PATTERN = /\s*<!-- CHEAT_INJECT_START -->[\s\S]*?<!-- CHEAT_INJECT_END -->\s*/g;
 
 function findPluginsFile(gameDir) {
@@ -110,7 +112,7 @@ function migrateLegacyHtmlInjection(projectRoot) {
   return true;
 }
 
-export function injectMVMZPlugins(gameDir, injectDirectory) {
+export function injectMVMZPlugins(gameDir, injectDirectory, { fontPath } = {}) {
   const pluginsFile = findPluginsFile(gameDir);
   if (!pluginsFile) {
     throw new Error("无法找到 RPG Maker MV/MZ 的 js/plugins.js 文件。");
@@ -121,12 +123,14 @@ export function injectMVMZPlugins(gameDir, injectDirectory) {
   const pluginDirectory = path.join(jsDirectory, "plugins");
   fs.mkdirSync(pluginDirectory, { recursive: true });
 
-  for (const plugin of CTOOL_PLUGINS) {
+  const activePlugins = fontPath ? [...CTOOL_PLUGINS, FONT_PLUGIN] : CTOOL_PLUGINS;
+  for (const plugin of activePlugins) {
     const sourcePath = path.join(injectDirectory, plugin.source);
     if (!fs.existsSync(sourcePath)) {
       throw new Error(`缺少 CTool 注入脚本：${plugin.source}`);
     }
   }
+  if (fontPath && !fs.existsSync(fontPath)) throw new Error('缺少工具字体文件');
 
   migrateLegacyHtmlInjection(projectRoot);
 
@@ -135,7 +139,7 @@ export function injectMVMZPlugins(gameDir, injectDirectory) {
   const cleanPlugins = withoutCToolPlugins(plugins);
   const nextPlugins = [
     ...cleanPlugins,
-    ...CTOOL_PLUGINS.map((plugin) => ({
+    ...activePlugins.map((plugin) => ({
       name: plugin.name,
       status: true,
       description: plugin.description,
@@ -143,26 +147,49 @@ export function injectMVMZPlugins(gameDir, injectDirectory) {
     })),
   ];
   const cleanSource = replacePluginConfiguration(originalSource, cleanPlugins, range);
-  const nextSource = replacePluginConfiguration(originalSource, nextPlugins, range);
   const backupPath = `${pluginsFile}.ctool.bak`;
 
+  let fontDirectory;
+  let fontFile;
+  if (fontPath) {
+    const fontsRoot = path.join(projectRoot, 'fonts');
+    fs.mkdirSync(fontsRoot, { recursive: true });
+    fontDirectory = fs.mkdtempSync(path.join(fontsRoot, '.ctool-'));
+    fontFile = path.join(fontDirectory, 'NotoSansCJKsc-Regular.otf');
+    const plugin = nextPlugins.find(item => item.name === FONT_PLUGIN.name);
+    plugin.parameters.fontFile = `${path.basename(fontDirectory)}/NotoSansCJKsc-Regular.otf`;
+    try { copyFileAtomic(fontPath, fontFile); }
+    catch (error) {
+      for (const file of [fontFile, `${fontFile}.ctool.tmp`]) if (fs.existsSync(file)) fs.unlinkSync(file);
+      fs.rmdirSync(fontDirectory); throw error;
+    }
+  }
+
+  try {
   if (!fs.existsSync(backupPath)) writeFileAtomic(backupPath, cleanSource);
 
-  for (const plugin of CTOOL_PLUGINS) {
+  for (const plugin of activePlugins) {
     copyFileAtomic(
       path.join(injectDirectory, plugin.source),
       path.join(pluginDirectory, `${plugin.name}.js`),
     );
   }
-  writeFileAtomic(pluginsFile, nextSource);
+  writeFileAtomic(pluginsFile, replacePluginConfiguration(originalSource, nextPlugins, range));
 
   return {
     pluginsFile,
     backupPath,
-    pluginFiles: CTOOL_PLUGINS.map((plugin) =>
+    fontFiles: fontFile ? [fontFile] : [],
+    fontDirectories: fontDirectory ? [fontDirectory] : [],
+    pluginFiles: activePlugins.map((plugin) =>
       path.join(pluginDirectory, `${plugin.name}.js`),
     ),
   };
+  } catch (error) {
+    if (fontFile && fs.existsSync(fontFile)) fs.unlinkSync(fontFile);
+    if (fontDirectory && fs.existsSync(fontDirectory)) fs.rmdirSync(fontDirectory);
+    throw error;
+  }
 }
 
 export function cleanupMVMZPlugins(session) {
@@ -181,6 +208,8 @@ export function cleanupMVMZPlugins(session) {
   for (const pluginFile of session.pluginFiles ?? []) {
     if (fs.existsSync(pluginFile)) fs.unlinkSync(pluginFile);
   }
+  for (const file of session.fontFiles ?? []) if (fs.existsSync(file)) fs.unlinkSync(file);
+  for (const directory of session.fontDirectories ?? []) if (fs.existsSync(directory)) fs.rmdirSync(directory);
   if (session.backupPath && fs.existsSync(session.backupPath)) {
     fs.unlinkSync(session.backupPath);
   }

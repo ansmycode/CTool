@@ -7,6 +7,8 @@ import { createLineDecoder } from "../src/electron/wolf/helperProtocol.js";
 
 const gameFlag = process.argv.indexOf("--game");
 const nativeFlag=process.argv.indexOf("--native-dir");
+const fontFlag=process.argv.indexOf('--font');
+const font=fontFlag>=0?path.resolve(process.argv[fontFlag+1]):null;
 const nativeDir=path.resolve(nativeFlag>=0?process.argv[nativeFlag+1]:"native/build/Release");
 const game = path.resolve(gameFlag >= 0 ? process.argv[gameFlag + 1] : path.join(nativeDir,"wolf-fixture.exe"));
 const dll = path.join(nativeDir,"ctool-wolf-x86.dll");
@@ -14,7 +16,8 @@ const exe = path.join(nativeDir,"inject-x86.exe");
 const sessionId = randomUUID(), nonce = randomBytes(24).toString("hex");
 const before = createHash("sha256").update(fs.readFileSync(game)).digest("hex");
 let ready = false, closed = false, databaseReported = false, writeRejected = false, pid, failure, timer;
-const child = spawn(exe, [game, dll, sessionId, nonce], { windowsHide: true,
+let fontCreates=0;
+const child = spawn(exe, [game, dll, sessionId, nonce, ...(font?[font]:[])], { windowsHide: true,
   cwd: path.dirname(game), stdio: ["pipe", "pipe", "pipe"] });
 child.stdin.on("error", () => {});
 const timeout = setTimeout(() => {
@@ -23,6 +26,7 @@ const timeout = setTimeout(() => {
 }, 45000);
 child.stdout.on("data", createLineDecoder((message) => {
   if (message.type === "spawned") pid = message.pid;
+  if (message.type === 'heartbeat') fontCreates=Math.max(fontCreates,message.fontCreates??0);
   if (message.type !== "heartbeat") console.log(JSON.stringify({
     type: message.type, pid: message.pid, message: message.message, capabilities: message.capabilities,
     status: message.status, value: message.value, reason: message.reason, payload:message.payload,
@@ -32,6 +36,7 @@ child.stdout.on("data", createLineDecoder((message) => {
     assert.equal(message.protocolVersion, 1); assert.equal(message.pid, pid);
     assert.deepEqual(message.capabilities, []);
     ready = true;
+    if(font){assert.equal(message.fontProtocol,1);assert.equal(message.fontId,'noto-sans-cjk-sc');}
     assert.equal(message.databaseProtocol,1);
     assert.equal(message.goldWriteProtocol,1);
     child.stdin.write("catalog 1 1 0 8\n");
@@ -58,6 +63,8 @@ try {
   assert.equal(code, 0); assert.ok(ready, "DLL hello"); assert.ok(closed, "actual game exit");
   assert.ok(databaseReported,"DLL bidirectional database reply (including unsupported status)");
   if(gameFlag<0)assert.ok(writeRejected,"unsupported write request rejected");
+  if(font)assert.ok(fontCreates>0,'game created fonts through override');
   assert.equal(createHash("sha256").update(fs.readFileSync(game)).digest("hex"), before, "Game.exe unchanged");
   console.log("PASS: x86 launch, DLL handshake, graceful game exit, EXE unchanged");
+  if(font)console.log(`PASS: startup font gate, ${fontCreates} intercepted game font creations`);
 } finally { clearTimeout(timer); clearTimeout(timeout); }

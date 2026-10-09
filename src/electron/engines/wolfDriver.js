@@ -10,8 +10,9 @@ import { tableCategory } from "../wolf/databaseSemantics.js";
 import { discoverCollections } from "../../engine/wolf/databaseMapping.js";
 import { validateRuntimeRequest } from "../wolf/runtimeProtocol.js";
 import { createTextTransfer } from '../wolf/translationDictionary.js';
+import { resolveLaunchFont } from '../wolf/launchFont.js';
 
-export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
+export function createWolfDriver({ resourceDirectory, fontDirectory, spawnProcess = spawn }) {
   let child;
   let timer;
   let exitMonitor;
@@ -55,7 +56,8 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
     return {kind:binding.kind,table:binding.table,row:reference.itemId,field:binding.field};
   };
   return {
-    async launch({ game, sessionId, emit }) {
+    async launch({ game, sessionId, emit, launchOptions }) {
+      const fontPath = resolveLaunchFont(launchOptions?.fontId, fontDirectory);
       const exe = path.join(resourceDirectory, "inject-x86.exe");
       const dll = path.join(resourceDirectory, "ctool-wolf-x86.dll");
       for (const [file, isDll] of [[exe, false], [dll, true]]) {
@@ -79,7 +81,7 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
         timer.unref?.();
       };
       await new Promise((resolve, reject) => {
-        child = spawnProcess(exe, [game.gamePath, dll, sessionId, nonce], {
+        child = spawnProcess(exe, [game.gamePath, dll, sessionId, nonce, ...(fontPath ? [fontPath] : [])], {
           cwd: path.dirname(game.gamePath), windowsHide: true, stdio: ["pipe", "pipe", "pipe"],
         });
         child.stdin.on("error", () => {});
@@ -108,6 +110,8 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
             }
             deadline();
             if (!authenticated) {
+              if (fontPath && (message.fontProtocol !== 1 || message.fontId !== 'noto-sans-cjk-sc'))
+                throw new Error('Wolf DLL 未确认所选字体，请更新原生组件后重新启动');
               authenticated = true;
               goldWritable=message.databaseProtocol===1&&message.goldWriteProtocol===1;
               inventoryWritable=message.databaseProtocol===1&&message.inventoryWriteProtocol===1;
@@ -125,7 +129,10 @@ export function createWolfDriver({ resourceDirectory, spawnProcess = spawn }) {
           } else if (message.type === "exited") {
             exited = true; clearTimeout(timer);goldMonitor?.stop();databaseRpc.close(); emit({ type: "exited" });
           } else if (message.type === "error") {
-            const error = new Error(String(message.message));
+            const raw = String(message.message);
+            const error = new Error(raw.includes('font_initialization')
+              ? 'Wolf 工具字体初始化失败：字体资源或游戏的 GDI 字体创建路径不受支持。可选择原游戏字体后重试。'
+              : raw);
             fail(error); reject(error);
           } else if (message.type === "injected") {
             emit({ type: "injected" });

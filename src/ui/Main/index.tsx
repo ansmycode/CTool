@@ -1,6 +1,6 @@
 // App.tsx
 import React, { lazy, Suspense, useEffect, useState } from "react";
-import { Layout, Button, message, Spin, Tabs, Alert } from "antd";
+import { Layout, Button, message, Spin, Tabs, Alert, Select } from "antd";
 import type { DetectedGame, GameSessionSnapshot } from "@/types/GameSession";
 import { InboxOutlined } from "@ant-design/icons";
 const { Content, Footer } = Layout;
@@ -21,6 +21,7 @@ const Main: React.FC = () => {
   const [gameInfo, setGameInfo] = useState<DetectedGame | null>(null);
   const [session, setSession] = useState<GameSessionSnapshot | null>(null);
   const [launchBusy, setLaunchBusy] = useState(false);
+  const [fontId, setFontId] = useState<'original' | 'noto-sans-cjk-sc'>('original');
   const [activeKey, setActiveKey] = useState("1");
   const isGameStarting = session?.processState === "running" ||
     (session?.state === "launching" && !["failed", "closed"].includes(session.state));
@@ -34,14 +35,20 @@ const Main: React.FC = () => {
       if (file) setGameInfo(await window.electronAPI.detectEngine(file));
     } catch (error) { message.error(error instanceof Error ? error.message : "识别失败"); }
   };
-  const handleLaunchGame = async (info: { gamePath: string }) => {
+  const handleLaunchGame = async (info: DetectedGame) => {
     if (launchBusy) return;
     setLaunchBusy(true);
-    try { applySession(await window.electronAPI.launchGame(info.gamePath)); }
+    try { applySession(await window.electronAPI.launchGame(info.gamePath, { fontId })); }
     catch (error) { message.error(error instanceof Error ? error.message : "启动失败"); }
     finally { setLaunchBusy(false); }
   };
-  const historyLaunchGame = (info: { gamePath: string }) => { void handleLaunchGame(info); };
+  const historyLaunchGame = async (info: { gamePath: string }) => {
+    try {
+      const detected = await window.electronAPI.detectEngine(info.gamePath);
+      setGameInfo(detected);
+      setActiveKey('1');
+    } catch (error) { message.error(error instanceof Error ? error.message : '识别失败'); }
+  };
 
   const openFakeGamePreview = () => {
     const url = new URL(window.location.href);
@@ -103,6 +110,12 @@ const Main: React.FC = () => {
                 <span>{gameInfo?.version || "未知"}</span>
               </div>
               {gameInfo.supportMessage && <p>{gameInfo.supportMessage}</p>}
+              {gameInfo.supported && <div className="launch-font-settings">
+                <label htmlFor="launch-font">游戏字体</label>
+                <Select id="launch-font" value={fontId} onChange={setFontId} disabled={launchBusy}
+                  options={[{ value: 'original', label: '原游戏字体' }, { value: 'noto-sans-cjk-sc', label: 'Noto Sans CJK SC（工具黑体）' }]} />
+                <span>启动后固定使用所选字体，更换需退出游戏后重新启动。</span>
+              </div>}
               <div className="gameinfo-actions">
                 {gameInfo?.supported ? (
                   <Button
