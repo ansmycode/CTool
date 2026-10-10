@@ -55,6 +55,10 @@ CheatMenu 固定窗口尺寸且页面不允许整体滚动，功能块与主要�
 
 ## 运行架构
 
+2026-10-10 性能优化已分批提交：`c0f37f2` 为 dev 首屏、遮挡绘制与仅 dev 日志，`44d2f21` 为 AI 任务摘要与异步串行保存，`3eb8e26` 为 Wolf 资料缓存与只读数字批量协议，基线 `6510aae`。下方 2026-10-09“工作区实现”记录是当时状态；本条为当前提交状态。用户已确认 dev 启动明显改善，Wolf/AI 的真实游戏性能与兼容边界仍待验收，未推送远程。
+
+2026-10-09 性能优化（工作区实现，真实游戏待验收）：dev 假游戏预览、引擎修改器与 Wolf 非首屏页按需加载；备份压缩依赖首次操作才导入，dev 终端记录窗口/页面/React 提交时间。Wolf collections adapter 的 load/cached 按会话缓存物品资料，焦点与再次激活刷新数量、手动刷新完整重建、写后回读对应数量区间。新增只读 numberpage，握手 numericReadProtocol=1，最多 100 行单数字字段；旧 DLL 未声明能力时主进程拆为十行 page，新 injector 与 DLL 须成对更新。原 page 十行限制不变。所有请求仍解析当前地址并核对结构，缺失槽不可写。AI workSession.js 单任务内存持有工作数据，通过异步串行快照保存，进度仅在落盘后发布；活动状态查询使用摘要，结束后停止两秒轮询，焦点重新查询。保存前检测源/工作文件外部变化；保留互斥、取消及迟到结果边界。初始化及 JSON 序列化仍在主进程，超大文件进一步 Worker 化待测量。
+
 2026-10-09 Wolf 译文持久化：首次由用户选择任意名称/位置的文件，按纯净 JSON 内容校验并加载成功后，在该游戏 `.ctool-cache/wolf-translation/dictionary.json` 原子保存独立副本和 Game.dat SHA-256 绑定；内部文件名是存储位置，不是外部译文识别规则。原文件移动/改名和删除文本解析缓存不影响副本。入口 `src/electron/wolf/translationPersistence.js`，由 gameSessionService 在 DLL connected 后每会话恢复一次；与手动加载/卸载互斥，文件读写跨会话串行，退出或旧会话结果不能加载到新游戏。恢复重新检查内容、编码和绑定，错误仅记录 translationRestore 并提示，不终止游戏、不循环重试。成功卸载删除副本，取消下次恢复；磁盘保存/删除失败提示当前操作已生效但持久化失败。状态变更经会话快照展示；Wolf 已就绪的 degraded 会话发布恢复/金币状态不应注销可用快捷键。首次外部文件仍由用户指定，不扫描任意目录，也不因文件名猜测译文归属。该功能不改变 Wolf 翻译尚未完善的验收边界。
 
 2026-10-09 Wolf 启动字体：`src/ui/Main/index.tsx` 在识别支持的游戏后提供“原游戏字体／Noto Sans CJK SC”选择，历史启动先回到该页；仅启动前可选，CheatMenu 不提供字体修改。`game:launch` 携带 `launchOptions.fontId`，`gameSessionService` 验证只允许内置 ID，MV/MZ 通过 inject/font.js 加载同一字体；按实际 www/js 或 js 布局临时复制到 fonts/.ctool-*，保留游戏原字体，正常退出清理本次资源。MV 使用 Graphics.loadFont，MZ 使用 FontManager.load；Scene_Boot 等待字体，窗口和 Bitmap 测量/绘制统一使用工具字体。字体插件未提供运行时修改接口。`src/electron/wolf/launchFont.js` 校验资源 SHA-256，`wolfDriver` 传给 injector 可选第五参数；DLL 在游戏入口点恢复前完成 FR_PRIVATE 加载、物理字体验证和 GDI 创建 API Hook，经成功/失败事件门控启动。`native/wolf/font_override.h` 覆盖动态解析的 CreateFontA/W 及 indirect/ex 入口，仅替换游戏主程序调用的字体名，保留度量/样式/字符集，跳过 SYMBOL 图标字体与外部 DLL 调用。字体持续至游戏退出，断连不恢复，未暴露运行时修改协议。原始字体及 OFL 许可证在 `tool_data/fonts/` 随包分发，该目录加入版本管理，其他 tool_data 仍忽略。字体不能解决 Shift-JIS 编码、图片文字、过长译文或固定文本框；真实游戏布局待验收。原生字体测试由 `test:native:unit` 执行，启动烟测可加 `--font`，详见 native/README.md 与知识库字体方案。
@@ -132,7 +136,7 @@ Wolf 翻译范围见本地 [翻译计划书](docs/WOLF_TRANSLATION_PLAN.md)。�
 
 2026-09-14 库存展示规则更新：已注册定义为主表，成功读取且映射明确的背包按 ID 覆盖数量；缺少持有记录显示 0，读取失败/未确认映射保持不可用。显示 0 不会创建游戏记录，也不代表存在可写地址。MV/MZ 使用 `InventoryTable`；Wolf 使用独立 `WolfInventoryTable` 与动态 collections 编排，仅复用搜索、滚动和草稿值等无业务语义的基础组件。
 
-Wolf 物品分类由映射结果生成独立标签页，每分类完整虚拟滚动表，无 UI 分页。DLL 已连通但运行时数据库尚未构造时，Wolf 启动遮罩会以短间隔重试目录读取，分类成功后才解除；正常使用阶段不后台轮询，仅在焦点、手动刷新或写入后更新活动分类。底层仍按 10 行分批读取，库存边界查询运行时行数，不以初始缓存行数跳过后续数据。读取失败与未确认映射不能按零库存处理。
+Wolf 物品分类由映射结果生成独立标签页，每分类完整虚拟滚动表，无 UI 分页。DLL 已连通但运行时数据库尚未构造时，Wolf 启动遮罩会以短间隔重试目录读取，分类成功后才解除；正常使用阶段不后台轮询，仅在焦点、手动刷新或写入后更新活动分类。资料首读按 10 行，数量专用读取最多 100 行（旧 DLL 降级为 10 行），资料按会话缓存；手动刷新重建资料，写后局部回读数量。库存边界查询运行时行数，不以初始缓存行数跳过后续数据。读取失败与未确认映射不能按零库存处理。
 
 Wolf 普通 UI 展示金币控制台和物品资料；原始数据库、手动金币候选和详细诊断只在 DEV 可见。Wolf adapter 独有 collections 接口通过 databaseMapping.js 和 wolfCollections.ts 解释可选基本系统语义，不向 MV/MZ 添加虚假能力。映射规则、MY 三项库存核验及多游戏扩展边界见 [Wolf 映射](docs/WOLF_MAPPING.md)。金币双向修改已由用户验收；当前确认映射的现有库存行可修改。库存 UI 已改传 collectionKey + itemId，wolfDriver 写前重读目录并解析 quantityBinding；DLL writeNumber 执行既有数字记录写入。新增表内数量字段规则只有合成测试，尚未经真实游戏验证。当前未实现缺失记录创建，不能宣称已支持所有注册物品；不同游戏的数量映射和记录初始化流程仍需验证。
 
@@ -201,6 +205,10 @@ tool_data/              打包时随应用分发的工具数据
 - 当前 Wolf 文本解析器存在标注为 WolfTL JS 移植的历史实现，入口为 `src/engine/wolf/text/fileParser.js`、`binaryReader.js`，其独立 `THIRD-PARTY-NOTICES.txt` 已移除，历史来源和许可合并保留在同目录 `README.md`。这不符合上述新实现规则，后续需单独处理；在替换并核实实现来源前，不得仅删除声明或改写注释来宣称已完成自主实现。
 
 ## 常用命令
+
+2026-10-10 Windows dev 遮挡绘制：`src/electron/main.js` 在 app ready 前仅对非打包 Windows 进程追加 `disable-backgrounding-occluded-windows`，避免窗口被其他应用覆盖后首次绘制挂起；生产不追加，默认后台节流保留。仅 `backgroundThrottling: false` 在本机 Electron 37 对照中不足以解决，不作为修复方案。启动日志 `Window ready-to-show` 是窗口事件，不冒充首绘；首绘使用 PerformanceObserver 的 First contentful paint，尚无记录的 Phases.firstPaintMs 为 null。独立窗口遮挡对照已通过，用户随后确认 dev 启动“速度明显变快了”，不扩大为其他功能或所有启动场景验收。渲染层启动埋点严格放在 import.meta.env.DEV 内，生产构建删除日志、计时标记及观察器；主进程按源码打包，计时及监听器只在 !app.isPackaged 分支注册，不全局删除正常错误/警告。
+
+dev 首屏使用 Ant Design 组件子入口和单图标入口，避免整个库的 dev 传输开销；`vite.config.ts` 定向预热 main/App/Main，明确现有预构建入口并允许结果提前释放。新增外部依赖或修改首屏导入时检查预构建及首次进入其他页是否触发重载，不能关闭依赖发现或预热整个仓库。dev 日志中的 `Renderer modules ready`、`Phases` 和 `Slowest local resources` 区分 HTML、模块加载和 React 提交；两条 React effect 日志是 StrictMode，不是两次启动。HTML 仅提供加载占位，不能把消除黑屏当作耗时问题已经解决。
 
 ```powershell
 npm run dev

@@ -27,6 +27,12 @@ npm run test:native:unit
 
 需要 Visual Studio C++ x86 工具与 CMake。产物包括 `build/Release/inject-x86.exe`、`ctool-wolf-x86.dll` 和 `MinHook-LICENSE.txt`。`test:native:unit` 不启动真实游戏；`test:native` 使用自建窗口执行启动烟测，实际游戏测试方法见 [状态文档](../docs/WOLF_P1_STATUS.md)。离线文本解析已迁移到 `src/engine/wolf/text/` 的 JS Worker，不需要原生构建。
 
+## 数字批量读取
+
+2026-10-09 新增 `numericReadProtocol=1` 握手能力与 `numberpage id kind table start limit field` 命令，最多 100 行、一个数字字段；响应保留结构和 ID 校验信息，省去逐行文本名称读取。原 `page` 仍最多十行、十六字段。主进程发现旧 DLL 未声明该能力时，将数字请求拆为十行 `page` 并校验合并结果。
+
+新增命令同时需要新版 injector 转发和 DLL 实现，请一起更新两个原生产物并重启游戏。`test:native` 检查新命令穿过 injector 和 DLL 的往返；自建窗口没有游戏数据库，返回不可用是预期结果。原生单测另验证 100 行读取、数字类型及上限拒绝。分页重新解析内存结构，不保存地址，也不保证跨请求原子快照。
+
 进程与 DLL 位数必须匹配；当前业务布局仅适配 x86。MinHook 自身支持 x64，不代表 CTool 已支持 x64 Wolf。MinHook 使用 **BSD-2-Clause**，许可证随组件分发，详见 [MinHook 来源](vendor/minhook/CTOOL_SOURCE.md)。
 
 ## 启动字体
