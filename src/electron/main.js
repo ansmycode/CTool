@@ -10,6 +10,11 @@ import { createGlobalShortcutService } from "./services/globalShortcutService.js
 import { createMainWindow } from "./window/createMainWindow.js";
 import { createWolfTranslationPersistence } from './wolf/translationPersistence.js';
 
+// Keep dev startup painting when another Windows app covers the tool window.
+if (!app.isPackaged && process.platform === 'win32') {
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+}
+
 // Chromium's generic "Network service crashed" line omits the reason/code.
 // Record only process metadata, never request URLs, headers or API keys.
 app.on("child-process-gone", (_event, details) => {

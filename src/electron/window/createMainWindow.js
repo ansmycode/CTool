@@ -41,6 +41,7 @@ export function createMainWindow() {
     maximizable: false,
     fullscreenable: false,
     title: "CatTool",
+    backgroundColor: "#f0f2f5",
     icon: iconPath,
     webPreferences: {
       preload: preloadPath,
@@ -54,6 +55,21 @@ export function createMainWindow() {
       path.join(app.getAppPath(), "dist-react", "index.html"),
     );
   } else {
+    // Electron ships this source file; packaged apps must not register diagnostics.
+    const started = performance.now();
+    console.info(`[startup] Window created at ${Math.round(process.uptime() * 1000)}ms of main-process uptime`);
+    mainWindow.webContents.on('console-message', details => {
+      if (details.message?.startsWith('[startup]')) console.info(details.message);
+    });
+    mainWindow.webContents.once('did-finish-load', () => {
+      console.info(`[startup] Page loaded in ${Math.round(performance.now() - started)}ms after window creation`);
+    });
+    mainWindow.webContents.once('dom-ready', () => {
+      console.info(`[startup] DOM ready in ${Math.round(performance.now() - started)}ms after window creation`);
+    });
+    mainWindow.once('ready-to-show', () => {
+      console.info(`[startup] Window ready-to-show in ${Math.round(performance.now() - started)}ms after window creation`);
+    });
     mainWindow.loadURL("http://127.0.0.1:5173");
   }
 

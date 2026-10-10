@@ -10,6 +10,20 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 5173,
     strictPort: true,
+    warmup: {
+      clientFiles: ["./src/ui/main.tsx", "./src/ui/App.tsx", "./src/ui/Main/index.tsx"],
+    },
+  },
+  optimizeDeps: {
+    entries: ["index.html"],
+    // Explicit existing entries let Vite serve optimized modules before the crawl finishes.
+    holdUntilCrawlEnd: false,
+    include: [
+      "react", "react-dom", "react-dom/client", "react/jsx-runtime", "react/jsx-dev-runtime",
+      "antd/es/layout", "antd/es/button", "antd/es/message", "antd/es/spin",
+      "antd/es/tabs", "antd/es/alert", "antd/es/select",
+      "@ant-design/icons/InboxOutlined", "antd", "@ant-design/icons",
+    ],
   },
   build: {
     outDir: `dist-react`,

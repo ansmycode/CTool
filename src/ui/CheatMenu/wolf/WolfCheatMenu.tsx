@@ -6,8 +6,6 @@ import type { GameCollection } from "@/game/database";
 import type { GameSessionSnapshot } from "@/types/GameSession";
 import WolfBaseFeaturesPage from "./base/WolfBaseFeaturesPage";
 import CollectionBrowser from "./inventory/CollectionBrowser";
-import WolfVariablesPage from "./variables/WolfVariablesPage";
-import WolfTranslationPage from "./translation/WolfTranslationPage";
 import "../index.css";
 import ShortcutSettings from '../shared/shortcuts';
 import useGameShortcuts from '../shared/shortcuts/useGameShortcuts';
@@ -15,10 +13,12 @@ import useGameShortcuts from '../shared/shortcuts/useGameShortcuts';
 const DatabaseBrowser = import.meta.env.DEV
   ? lazy(() => import("@/ui/Main/DatabaseBrowser"))
   : null;
+const WolfVariablesPage = lazy(() => import("./variables/WolfVariablesPage"));
+const WolfTranslationPage = lazy(() => import("./translation/WolfTranslationPage"));
 
 interface WolfCheatMenuProps {
   session: GameSessionSnapshot;
-  gameInfo: any;
+  gameInfo: NonNullable<GameSessionSnapshot['game']>;
 }
 
 const isDatabaseStartingError = (error: unknown) =>
@@ -182,13 +182,13 @@ export default function WolfCheatMenu({ session, gameInfo }: WolfCheatMenuProps)
         text="正在初始化游戏数据库与物品资料…"
       />
       {activeKey !== "translation" && initializing && session.runtimeAvailable && <Alert type="info" message="正在加载物品资料，基础功能与数值变量可独立使用。" />}
-      <Tabs
+      <Suspense fallback={<LoadingOverlay visible={true} />}><Tabs
         className="cheat-menu-tabs"
         activeKey={activeKey}
         items={items}
         onChange={setActiveKey}
         type="card"
-      />
+      /></Suspense>
     </div>
   );
 }

@@ -52,8 +52,8 @@ const detectors = [mvmzDetector];
 //读取游戏信息
 export function detectAndReadInfo(gamePath) {
   for (const detector of detectors) {
-    if (detector.readInfo(gamePath)) {
-      const info = detector.readInfo(gamePath);
+    const info = detector.readInfo(gamePath);
+    if (info) {
       return info;
     }
   }

@@ -1,7 +1,5 @@
 import fs from "fs";
 import path from "path";
-import archiver from "archiver";
-import extractZip from "extract-zip";
 import { getTranslationEngineAdapter } from "./translationEngineAdapters.js";
 
 const BACKUP_DIRECTORY_NAME = "CTool_Backups";
@@ -45,7 +43,8 @@ function scanBackupDirectory(directory, legacy) {
     .map((entry) => backupInfo(path.join(directory, entry.name), legacy));
 }
 
-function createZipFromDirectory(sourceDirectory, outputPath) {
+async function createZipFromDirectory(sourceDirectory, outputPath) {
+  const { default: archiver } = await import('archiver');
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(outputPath);
     const archive = archiver("zip", { zlib: { level: 9 } });
@@ -116,6 +115,7 @@ export async function restoreGameDataBackup(gameInfo, selectedBackupPath, event)
   event?.sender?.send("builtin-status", { status: "restore" });
   try {
     fs.mkdirSync(extractedPath, { recursive: true });
+    const { default: extractZip } = await import('extract-zip');
     await extractZip(selectedBackupPath, { dir: extractedPath });
     adapter.validateRestore(extractedPath);
 

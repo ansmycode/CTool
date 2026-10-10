@@ -1,8 +1,14 @@
 // App.tsx
 import React, { lazy, Suspense, useEffect, useState } from "react";
-import { Layout, Button, message, Spin, Tabs, Alert, Select } from "antd";
+import Layout from "antd/es/layout";
+import Button from "antd/es/button";
+import message from "antd/es/message";
+import Spin from "antd/es/spin";
+import Tabs from "antd/es/tabs";
+import Alert from "antd/es/alert";
+import Select from "antd/es/select";
 import type { DetectedGame, GameSessionSnapshot } from "@/types/GameSession";
-import { InboxOutlined } from "@ant-design/icons";
+import InboxOutlined from "@ant-design/icons/InboxOutlined";
 const { Content, Footer } = Layout;
 
 import "./index.css";
