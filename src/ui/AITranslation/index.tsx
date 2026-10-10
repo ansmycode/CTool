@@ -54,24 +54,32 @@ const AITranslation: React.FC = () => {
     if (!sourcePath) { setTask(null); return; }
     let disposed = false;
     let timer: ReturnType<typeof setTimeout>;
+    let refreshing = false;
     setCheckingTask(true);
     const refresh = async () => {
+      if (refreshing || disposed) return;
+      refreshing = true;
+      clearTimeout(timer);
+      let poll = isStarting;
       try {
         const status = await window.electronAPI.getAITranslationTask(sourcePath);
         if (disposed) return;
         setTask(status);
+        poll = poll || status.running;
         setSelectedFile(current => current?.filePath === sourcePath ? status.file : current);
       } catch (error) {
         if (!disposed) setMessage({ type: 'error', text: error instanceof Error ? error.message : '无法查询翻译任务状态。' });
       } finally {
+        refreshing = false;
         if (!disposed) {
           setCheckingTask(false);
-          timer = setTimeout(refresh, 2000);
+          if (poll) timer = setTimeout(refresh, 2000);
         }
       }
     };
     void refresh();
-    return () => { disposed = true; clearTimeout(timer); };
+    window.addEventListener('focus', refresh);
+    return () => { disposed = true; clearTimeout(timer); window.removeEventListener('focus', refresh); };
   }, [selectedFile?.filePath, isStarting]);
 
   const preset = useMemo(

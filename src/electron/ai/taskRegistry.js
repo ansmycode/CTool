@@ -14,7 +14,9 @@ export async function runExclusiveAITranslation(sourcePath, worker) {
   }
   const task = { controller: new AbortController(), startedAt: Date.now() };
   activeTasks.set(key, task);
-  task.done = Promise.resolve().then(() => worker(task.controller.signal));
+  task.done = Promise.resolve().then(() => worker(task.controller.signal, file => {
+    task.file = structuredClone(file);
+  }));
   try {
     return await task.done;
   } finally {
@@ -25,7 +27,7 @@ export async function runExclusiveAITranslation(sourcePath, worker) {
 export function getAITranslationTask(sourcePath) {
   const task = activeTasks.get(taskKey(sourcePath));
   return { running: Boolean(task), stopping: task?.controller.signal.aborted ?? false,
-    startedAt: task?.startedAt ?? null };
+    startedAt: task?.startedAt ?? null, ...(task?.file ? { file: structuredClone(task.file) } : {}) };
 }
 
 export async function stopAITranslationTask(sourcePath) {

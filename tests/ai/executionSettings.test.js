@@ -9,6 +9,13 @@ import { AIProviderError } from "../../src/electron/ai/providerClient.js";
 import { runExclusiveAITranslation } from "../../src/electron/ai/taskRegistry.js";
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
+async function until(predicate) {
+  const deadline = Date.now() + 3000;
+  while (!predicate()) {
+    assert.ok(Date.now() < deadline, 'async operation did not reach expected state');
+    await new Promise(resolve => setTimeout(resolve, 5));
+  }
+}
 const translated = batch => Object.fromEntries(batch.map(item => [item.key, { value: `译-${item.value}`, status: "translated" }]));
 function fixture(t) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "ctool-settings-"));
@@ -42,13 +49,13 @@ test("并发配置真正生效，乱序完成仍保存所有批次并传递超�
       return new Promise(resolve => pending.push(() => resolve(translated(batch))));
     },
   });
-  await tick();
+  await until(() => pending.length === 2);
   assert.equal(pending.length, 2);
   pending[1]();
-  await tick();
+  await until(() => pending.length === 3);
   assert.equal(pending.length, 3);
   pending[2]();
-  await tick();
+  await until(() => pending.length === 4);
   assert.equal(pending.length, 4);
   pending[3]();
   pending[0]();
@@ -102,7 +109,7 @@ test("致命失败后停止新批次，保留在途成功结果并等待其结�
     requestBatch: (_config, batch) => new Promise((resolve, reject) => pending.push({ resolve: () => resolve(translated(batch)), reject })),
   }));
   const checked = assert.rejects(task, /认证失败/).then(() => { settled = true; });
-  await tick();
+  await until(() => pending.length === 2);
   pending[0].reject(new AIProviderError("认证失败", { retryable: false }));
   await tick();
   assert.equal(pending.length, 2);

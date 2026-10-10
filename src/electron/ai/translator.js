@@ -3,13 +3,9 @@ import { normalizeAITranslationSettings, DEFAULT_AI_TRANSLATION_SETTINGS } from 
 import { AIProviderError, requestTranslationBatch } from "./providerClient.js";
 import { abortable, sleepWithSignal } from './cancellation.js';
 import {
-  finishAITranslation,
-  getAITranslationPaths,
-  markAITranslationBatchError,
   prepareAITranslationWorkFile,
-  readAITranslationWorkFile,
-  saveAITranslationBatch,
 } from "./workFile.js";
+import { createAIWorkSession } from './workSession.js';
 
 export const DEFAULT_REQUEST_INTERVAL_MS = DEFAULT_AI_TRANSLATION_SETTINGS.requestIntervalSeconds * 1000;
 
@@ -93,7 +89,7 @@ async function processBatch(
       options.maxAttempts,
     );
     options.signal?.throwIfAborted();
-    saveAITranslationBatch(sourcePath, translatedItems);
+    await options.workSession.save(translatedItems);
   } catch (error) {
     const shouldSplit =
       error instanceof AIProviderError &&
@@ -132,10 +128,11 @@ export async function runAITranslation(sourcePath, config, options = {}) {
     maxAttempts: settings.maxRetries + 1,
     requestOptions: { timeoutMs: settings.requestTimeoutSeconds * 1000, ...options.requestOptions, signal },
   };
-  prepareAITranslationWorkFile(sourcePath);
-  const { workFilePath } = getAITranslationPaths(sourcePath);
-  const workFile = readAITranslationWorkFile(workFilePath);
-  const batches = createTranslationBatches(workFile.items, {
+  const initial = prepareAITranslationWorkFile(sourcePath);
+  options.onProgress?.(initial);
+  const workSession = await createAIWorkSession(sourcePath, initial, options);
+  executionOptions.workSession = workSession;
+  const batches = createTranslationBatches(workSession.items, {
     maxEntries: settings.maxEntries,
     maxCharacters: settings.maxCharacters,
     ...options.batchOptions,
@@ -175,9 +172,11 @@ export async function runAITranslation(sourcePath, config, options = {}) {
         fatalError ??= cause;
         return;
       }
-      markAITranslationBatchError(sourcePath, failedBatch, message);
+      await workSession.save(Object.fromEntries(failedBatch.map(entry => [entry.key,
+        { value: entry.value, status: 'error', error: message }])));
     }
   }, settings.concurrency);
+  const result = await workSession.finish();
   if (fatalError) throw fatalError;
-  return finishAITranslation(sourcePath);
+  return result;
 }

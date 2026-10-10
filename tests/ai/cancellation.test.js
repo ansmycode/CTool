@@ -12,6 +12,13 @@ import { getAITranslationPaths, readAITranslationWorkFile } from '../../src/elec
 const config = { provider: 'deepseek', baseUrl: 'https://example.com', apiKey: 'test-secret', model: 'test', sourceLanguage: '日语', targetLanguage: '中文' };
 const batch = [{ key: '猫', value: '猫', status: 'untranslated' }];
 const tick = () => new Promise(resolve => setImmediate(resolve));
+async function until(predicate) {
+  const deadline = Date.now() + 3000;
+  while (!predicate()) {
+    assert.ok(Date.now() < deadline, 'async operation did not reach expected state');
+    await new Promise(resolve => setTimeout(resolve, 5));
+  }
+}
 const translated = items => Object.fromEntries(items.map(item => [item.key, { value: `译-${item.key}`, status: 'translated' }]));
 
 test('request deadline covers hung fetch and hung response body, even if abort is ignored', async () => {
@@ -50,10 +57,10 @@ test('stop preserves saved batches, releases lock, resumes pending text and igno
       signal,
       requestBatch: (_config, items) => new Promise(resolve => pending.push(() => resolve(translated(items)))),
     }));
-  await tick();
+  await until(() => pending.length === 2);
   assert.equal(getAITranslationTask(source).running, true);
   pending[0]();
-  await tick();
+  await until(() => pending.length === 3);
   assert.equal(pending.length, 3);
   await stopAITranslationTask(source);
   assert.equal(getAITranslationTask(source).running, false);
@@ -83,7 +90,7 @@ test('stop interrupts long Retry-After wait and does not mark canceled batches a
       throw new AIProviderError('限流', { retryable: true, retryAfterMs: 3600000 });
     },
   }));
-  await tick();
+  await until(() => calls === 1);
   await stopAITranslationTask(source);
   const result = await task;
   assert.equal(calls, 1);

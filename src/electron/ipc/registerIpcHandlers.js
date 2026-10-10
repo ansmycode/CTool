@@ -155,6 +155,7 @@ export function registerIpcHandlers({
     if (typeof sourcePath !== "string" || sourcePath.length === 0) {
       throw new Error("缺少原始翻译 JSON 路径。");
     }
+    if (getAITranslationTask(sourcePath).running) throw new Error('这个文件正在翻译中，请先停止任务。');
     try {
       return prepareAITranslationWorkFile(sourcePath);
     } catch (error) {
@@ -174,7 +175,8 @@ export function registerIpcHandlers({
 
   ipcMain.handle('ai-translation:task-status', (_event, sourcePath) => {
     if (typeof sourcePath !== 'string' || !sourcePath) throw new Error('缺少原始翻译 JSON 路径。');
-    return { ...getAITranslationTask(sourcePath), file: inspectAITranslationSource(sourcePath) };
+    const status = getAITranslationTask(sourcePath);
+    return { ...status, file: status.file ?? inspectAITranslationSource(sourcePath) };
   });
   ipcMain.handle('ai-translation:stop', async (_event, sourcePath) => {
     if (typeof sourcePath !== 'string' || !sourcePath) throw new Error('缺少原始翻译 JSON 路径。');
@@ -189,8 +191,8 @@ export function registerIpcHandlers({
         throw new Error("缺少原始翻译 JSON 路径。");
       }
       try {
-        return await runExclusiveAITranslation(sourcePath, signal =>
-          runAITranslation(sourcePath, config, { signal }),
+        return await runExclusiveAITranslation(sourcePath, (signal, onProgress) =>
+          runAITranslation(sourcePath, config, { signal, onProgress }),
         );
       } catch (error) {
         throw safeAIError(error, "AI 翻译失败。");
