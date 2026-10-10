@@ -55,6 +55,11 @@ export function validateDatabaseRequest(request) {
   )
     return [request.kind, request.start, request.limit];
   if (
+    request.operation === 'numberpage' &&
+    integer(request.table, 0, 4095) && integer(request.start, 0, 100000) &&
+    integer(request.limit, 1, 100) && integer(request.fieldStart, 0, 4095)
+  ) return [request.kind, request.table, request.start, request.limit, request.fieldStart];
+  if (
     request.operation === "page" &&
     integer(request.table, 0, 4095) &&
     integer(request.start, 0, 100000) &&
@@ -128,7 +133,8 @@ export function validateDatabaseReply(payload, request) {
       payload.table !== request.table ||
       !label(payload.name) ||
       !integer(payload.fieldCount, 0, 4096) ||
-      !fields(payload.fields, request.fieldLimit) ||
+      !fields(payload.fields, request.operation === 'numberpage' ? 1 : request.fieldLimit) ||
+      (request.operation === 'numberpage' && (payload.fields.length !== 1 || payload.fields[0].type !== 'number')) ||
       !payload.fields.every(
         (f, i) => f.id === request.fieldStart + i && f.id < payload.fieldCount,
       ) ||

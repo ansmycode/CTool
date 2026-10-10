@@ -15,6 +15,35 @@ function pe(dll=false) {
 }
 const tick = () => new Promise(resolve=>setImmediate(resolve));
 
+test('numeric-read handshake uses one batch, old DLL falls back to bounded ten-row pages',async t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'ctool-numeric-driver-'));
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  fs.writeFileSync(path.join(root,'inject-x86.exe'),pe());fs.writeFileSync(path.join(root,'ctool-wolf-x86.dll'),pe(true));
+  for(const supported of [false,true]){
+    const child=Object.assign(new EventEmitter(),{stdin:new PassThrough(),stdout:new PassThrough(),stderr:new PassThrough()});
+    let identity;const commands=[];
+    const send=m=>child.stdout.write(JSON.stringify(m)+'\n');
+    child.stdin.on('data',chunk=>{
+      const [op,id,...args]=String(chunk).trim().split(' ');if(op==='detach')return;
+      commands.push(op);const [kind,table,start,limit,field]=args.map(Number);
+      const payload={status:'available',kind,table,name:'Counts',total:25,fieldCount:1,
+        fields:[{id:field,name:'Quantity',type:'number'}],rows:Array.from({length:Math.min(limit,25-start)},(_,i)=>({id:start+i,name:'',values:[start+i]}))};
+      queueMicrotask(()=>send({...identity,type:'rpc',requestId:Number(id),payload}));
+    });
+    const driver=createWolfDriver({resourceDirectory:root,spawnProcess:(_exe,args)=>{
+      identity={sessionId:args[2],nonce:args[3],protocolVersion:1,pid:123};
+      queueMicrotask(()=>{send({type:'spawned',pid:123});send({...identity,type:'hello',runtimeProtocol:1,...(supported?{numericReadProtocol:1}:{})});});
+      return child;
+    }});
+    try{
+      await driver.launch({game:{gamePath:'Game.exe'},sessionId:'numeric',emit:()=>{}});
+      const result=await driver.readDatabase({operation:'numberpage',kind:1,table:7,start:0,limit:100,fieldStart:0});
+      assert.equal(result.rows.length,25);assert.equal(result.rows[24].values[0],24);
+      assert.deepEqual(commands,supported?['numberpage']:['page','page','page']);
+    }finally{await driver.dispose();}
+  }
+});
+
 test('selected font is resolved by the main process and must be confirmed by the DLL',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'ctool-font-driver-'));
   try {

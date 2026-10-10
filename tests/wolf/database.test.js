@@ -6,6 +6,18 @@ import {createGoldMonitor} from "../../src/electron/wolf/goldMonitor.js";
 const table=(id=6,name="パーティー情報")=>({id,name,rowCount:1,fieldCount:7,fields:[{id:0,name:"所持金",type:"number"},...Array.from({length:6},(_,i)=>({id:i+1,name:`メンバー${i+1}`,type:"number"}))]});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('numeric batches allow 100 rows, reject text and oversized replies while legacy page stays bounded',()=>{
+  const request={operation:'numberpage',kind:1,table:7,start:0,limit:100,fieldStart:0};
+  assert.deepEqual(validateDatabaseRequest(request),[1,7,0,100,0]);
+  assert.throws(()=>validateDatabaseRequest({...request,limit:101}));
+  const payload={status:'available',kind:1,table:7,name:'Counts',total:100,fieldCount:1,
+    fields:[{id:0,name:'Quantity',type:'number'}],rows:Array.from({length:100},(_,id)=>({id,name:'',values:[id]}))};
+  assert.equal(validateDatabaseReply(payload,request),payload);
+  assert.throws(()=>validateDatabaseReply({...payload,fields:[{id:0,name:'Text',type:'string'}]},request));
+  assert.throws(()=>validateDatabaseReply({...payload,rows:[...payload.rows,{id:100,name:'',values:[1]}]},request));
+  assert.throws(()=>validateDatabaseRequest({...request,operation:'page',fieldLimit:1}));
+});
+
 test("gold write protocol bounds and acknowledgement",()=>{
   const request={operation:"goldwrite",kind:1,table:6,row:0,field:0,expected:9500,value:10000};
   assert.deepEqual(validateDatabaseRequest(request),[1,6,0,0,9500,10000]);

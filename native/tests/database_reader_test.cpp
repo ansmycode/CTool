@@ -32,6 +32,18 @@ int main(){
   wolf::DatabaseReader reader;reader.locate(ptr(image.data()));
   auto catalog=reader.catalog(1,0,8);check(catalog.find("\"rowCount\":1,\"fieldCount\":7")!=std::string::npos,"record/field vector regression");
   auto page=reader.page(1,0,0,10,0,16);check(page.find("5000,12,-1")!=std::string::npos,"initial value");
+  auto numeric=reader.page(1,0,0,100,0,1,true);
+  check(numeric.find("[5000]")!=std::string::npos&&numeric.find("Current player")==std::string::npos,"numeric page omits row text");
+  bool numericDenied=false;try{reader.page(1,0,0,101,0,1,true);}catch(const std::exception&){numericDenied=true;}check(numericDenied,"numeric batch bounded");
+  numericDenied=false;try{reader.page(1,0,0,100,6,1,true);}catch(const std::exception&){numericDenied=true;}check(numericDenied,"numeric batch rejects text");
+  uint32_t manyRecords[100*9]{},manyNames[100*6]{};int32_t manyValues[100]{};
+  for(uint32_t i=0;i<100;i++){manyValues[i]=static_cast<int32_t>(i+1000);*reinterpret_cast<wolf::Vector*>(manyRecords+i*9)=vec(manyValues+i,4);}
+  *reinterpret_cast<wolf::Vector*>(meta+24)=vec(manyNames,sizeof(manyNames));
+  *reinterpret_cast<wolf::Vector*>(table+3)=vec(manyRecords,sizeof(manyRecords));
+  numeric=reader.page(1,0,0,100,0,1,true);
+  check(numeric.find("\"total\":100")!=std::string::npos&&numeric.find("\"id\":99,\"name\":\"\",\"values\":[1099]")!=std::string::npos,"100-row numeric batch");
+  *reinterpret_cast<wolf::Vector*>(meta+24)=vec(rowNames,sizeof(rowNames));
+  *reinterpret_cast<wolf::Vector*>(table+3)=vec(record,sizeof(record));
   check(page.find("quote\\\" slash\\\\ newline\\u000a")!=std::string::npos,"string field and JSON escaping");
   check(reader.writeNumber(1,0,0,0,5000,9500).find("\"status\":\"written\"")!=std::string::npos,"write acknowledged");
   check(numbers[0]==9500,"native gold memory changed");

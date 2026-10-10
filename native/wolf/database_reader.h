@@ -184,16 +184,17 @@ class DatabaseReader {
     }
     unchanged(db);return out+"]}";
   }
-  std::string page(uint32_t kind,uint32_t index,uint32_t start,uint32_t limit,uint32_t fieldStart,uint32_t fieldLimit) const {
-    if(limit<1||limit>10||fieldLimit<1||fieldLimit>16)throw std::runtime_error("invalid_page_size");
+  std::string page(uint32_t kind,uint32_t index,uint32_t start,uint32_t limit,uint32_t fieldStart,uint32_t fieldLimit,bool numericOnly=false) const {
+    if(limit<1||limit>(numericOnly?100u:10u)||fieldLimit<1||fieldLimit>16||(numericOnly&&fieldLimit!=1))throw std::runtime_error("invalid_page_size");
     const auto db=database(kind);const auto t=table(db,index);
     if(start>t.rowCount||fieldStart>t.fieldCount)throw std::runtime_error("page_out_of_range");
+    if(numericOnly){const auto d=descriptor(t,fieldStart);if(d<1000||d>=2000)throw std::runtime_error("number_not_numeric");}
     std::string out="{\"status\":\"available\",\"kind\":"+std::to_string(kind)+",\"table\":"+std::to_string(index)+",\"name\":"+quote(engineString(t.meta))+",\"total\":"+std::to_string(t.rowCount)+",\"fieldCount\":"+std::to_string(t.fieldCount)+",\"fields\":[";
     const auto end=(std::min)(t.fieldCount,fieldStart+fieldLimit);
     for(uint32_t f=fieldStart;f<end;f++){if(f>fieldStart)out+=',';out+=fieldJson(t,f);}out+="],\"rows\":[";
     for(uint32_t r=start;r<(std::min)(t.rowCount,start+limit);r++) {
       if(r>start)out+=',';
-      out+="{\"id\":"+std::to_string(r)+",\"name\":"+quote(engineString(t.rows.begin+r*24))+",\"values\":[";
+      out+="{\"id\":"+std::to_string(r)+",\"name\":"+(numericOnly?"\"\"":quote(engineString(t.rows.begin+r*24)))+",\"values\":[";
       for(uint32_t f=fieldStart;f<end;f++){if(f>fieldStart)out+=',';try{out+=cellJson(t,r,f);}catch(const std::exception&){out+="null";}}out+="]}";
     }
     unchanged(db);return out+"]}";

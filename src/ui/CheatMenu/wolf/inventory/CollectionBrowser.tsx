@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Space, Tooltip, Typography } from "antd";
 import type { GameCollection, GameCollectionAccess } from "@/game/database";
 import WolfInventoryTable from "./WolfInventoryTable";
@@ -21,12 +21,24 @@ export default function CollectionBrowser({
   const [loading, setLoading] = useState(false),
     [revision, setRevision] = useState(0),
     [progress, setProgress] = useState("");
+  const fullRefresh = useRef(false);
   useEffect(() => {
     if (!active) return;
     let disposed = false;
+    const controller = new AbortController();
     const load = async () => {
       setLoading(true);
+      const cached = access.cached?.(group.key);
+      if (cached) setRows(cached.rows);
       try {
+        if (access.load) {
+          const full = fullRefresh.current;
+          fullRefresh.current = false;
+          const result = await access.load(group.key, { full, signal: controller.signal,
+            onProgress: (done, total) => { if (!disposed) setProgress(`读取 ${done} / ${total}`); } });
+          if (!disposed) { setRows(result.rows); setError(''); }
+          return;
+        }
         const all: Row[] = [];
         let total: number | undefined;
         for (let start = 0; start < (total ?? 1); start += 10) {
@@ -52,6 +64,7 @@ export default function CollectionBrowser({
     void load();
     return () => {
       disposed = true;
+      controller.abort();
     };
   }, [access, group.key, active, revision, refreshToken]);
   const changeCount = async (id: number, value: number, expected: number) => {
@@ -59,8 +72,10 @@ export default function CollectionBrowser({
     if (!writeEnabled || !row || row.owned === undefined || !row.writable || !row.inventoryTarget) throw new Error("库存写入已不可用，请刷新");
     try {
       await access.setCount(row.inventoryTarget, expected, value);
-      setRows(current => current.map(item => item.id === id ? { ...item, owned: value } : item));
-      setRevision((current) => current + 1);
+      if (access.load) {
+        const result = await access.load(group.key, { start: id });
+        setRows(result.rows);
+      } else setRevision((current) => current + 1);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
       throw e;
@@ -70,7 +85,7 @@ export default function CollectionBrowser({
     <div className="wolf-collection-page">
       <Space className="wolf-collection-toolbar" wrap>
         <Typography.Text type="secondary">{group.writable && writeEnabled ? "可修改已分配的数量槽" : "数量只读"}</Typography.Text>
-        <Button size="small" loading={loading} onClick={() => setRevision((x) => x + 1)}>刷新</Button>
+        <Button size="small" loading={loading} onClick={() => { fullRefresh.current = true; setRevision((x) => x + 1); }}>刷新</Button>
         <Tooltip title="列出全部物品定义，用背包数量按 ID 匹配；背包中没有的物品显示 0。读取失败或映射未确认时显示未知。">
           <Typography.Text type="secondary">说明 ⓘ</Typography.Text>
         </Tooltip>
@@ -78,7 +93,7 @@ export default function CollectionBrowser({
       </Space>
       <WolfInventoryTable
         rows={rows}
-        onChangeCount={group.writable && writeEnabled ? changeCount : undefined}
+        onChangeCount={group.writable && writeEnabled && !loading ? changeCount : undefined}
         emptyText={loading ? "正在读取资料…" : "没有匹配条目"}
       />
       {error && <Typography.Text type="danger">{error}</Typography.Text>}

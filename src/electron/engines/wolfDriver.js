@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createLineDecoder } from "../wolf/helperProtocol.js";
 import { readPE } from "../../engine/wolf/detect.js";
-import { createDatabaseRpc } from "../wolf/databaseProtocol.js";
+import { createDatabaseRpc, validateDatabaseRequest, validateDatabaseReply } from "../wolf/databaseProtocol.js";
 import { createGoldMonitor } from "../wolf/goldMonitor.js";
 import { tableCategory } from "../wolf/databaseSemantics.js";
 import { discoverCollections } from "../../engine/wolf/databaseMapping.js";
@@ -21,6 +21,7 @@ export function createWolfDriver({ resourceDirectory, fontDirectory, spawnProces
   let inventoryWritable=false;
   let runtimeAvailable=false;
   let textAvailable=false;
+  let numericReadAvailable=false;
   const databaseRpc=createDatabaseRpc(command=>{
     if(!child?.stdin.writable)throw new Error("注入器输入已关闭");
     child.stdin.write(command);
@@ -117,6 +118,7 @@ export function createWolfDriver({ resourceDirectory, fontDirectory, spawnProces
               inventoryWritable=message.databaseProtocol===1&&message.inventoryWriteProtocol===1;
               runtimeAvailable=message.runtimeProtocol===1;
               textAvailable=message.textProtocol===1;
+              numericReadAvailable=message.numericReadProtocol===1;
               emit({ type: "connected", capabilities: [], goldWritable, inventoryWritable, runtimeAvailable, databaseReadOnly:message.databaseProtocol===1,
                 message: message.databaseProtocol===1 ? (goldWritable?"DLL 已连接；数据库浏览与金币修改已开启":"DLL 已连接；数据库只读浏览与自动识别已开启") : "DLL 已连接；请重新编译 DLL 以使用数据库浏览" });
               if(message.databaseProtocol===1||runtimeAvailable||textAvailable)databaseRpc.enable();
@@ -163,7 +165,21 @@ export function createWolfDriver({ resourceDirectory, fontDirectory, spawnProces
       });
     },
     async readDatabase(request) {
-      if(!["catalog","page"].includes(request?.operation))throw new Error("数据库浏览仅允许读取");
+      if(!["catalog","page","numberpage"].includes(request?.operation))throw new Error("数据库浏览仅允许读取");
+      validateDatabaseRequest(request);
+      if(request.operation==='numberpage'&&!numericReadAvailable){
+        let merged;
+        for(let offset=0;offset<request.limit;offset+=10){
+          const part=await databaseRpc.request({...request,operation:'page',start:request.start+offset,limit:Math.min(10,request.limit-offset),fieldLimit:1});
+          if(part.status!=='available')return part;
+          if(!merged)merged={...part,rows:[]};
+          if(part.total!==merged.total||part.name!==merged.name||JSON.stringify(part.fields)!==JSON.stringify(merged.fields))
+            throw new Error('数据库正在变化，请重试');
+          merged.rows.push(...part.rows);
+          if(request.start+offset+part.rows.length>=part.total)break;
+        }
+        return validateDatabaseReply(merged,request);
+      }
       const result=await databaseRpc.request(request);
       if(result.status==="available"&&request.operation==="catalog")
         return {...result,tables:result.tables.map(t=>({...t,category:tableCategory(t,request.kind)}))};

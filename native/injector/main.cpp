@@ -48,7 +48,7 @@ static DWORD WINAPI commands(void* argument) {
   while (std::getline(std::cin, command)) {
     if (command == "close") EnumWindows(closeWindow, 0);
     if (command == "detach") break;
-    if(command.rfind("catalog ",0)==0||command.rfind("page ",0)==0||command.rfind("goldwrite ",0)==0||command.rfind("inventorywrite ",0)==0||
+    if(command.rfind("catalog ",0)==0||command.rfind("page ",0)==0||command.rfind("numberpage ",0)==0||command.rfind("goldwrite ",0)==0||command.rfind("inventorywrite ",0)==0||
        command.rfind("runtime ",0)==0||command.rfind("varcatalog ",0)==0||command.rfind("varpage ",0)==0||
        command.rfind("varwrite ",0)==0||command.rfind("speed ",0)==0||command.rfind("noclip ",0)==0||
        command.rfind("textbegin ",0)==0||command.rfind("textchunk ",0)==0||command.rfind("textcommit ",0)==0||

@@ -13,6 +13,7 @@ export interface DatabaseTable {
 }
 export type DatabaseRequest =
   | { operation: "catalog"; kind: number; start: number; limit: number }
+  | { operation: "numberpage"; kind: number; table: number; start: number; limit: number; fieldStart: number }
   | {
       operation: "page";
       kind: number;
@@ -65,6 +66,8 @@ export interface GameCollection {
   writable?: boolean;
 }
 export interface GameCollectionAccess {
+  cached?(key: string): Awaited<ReturnType<GameCollectionAccess['page']>> | undefined;
+  load?(key: string, options?: { full?: boolean; start?: number; onProgress?: (done: number, total: number) => void; signal?: AbortSignal }): Promise<Awaited<ReturnType<GameCollectionAccess['page']>>>;
   list(): Promise<GameCollection[]>;
   page(
     key: string,

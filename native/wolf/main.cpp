@@ -56,7 +56,7 @@ static DWORD WINAPI bootstrap(void*) {
   const std::string base = "\"protocolVersion\":1,\"sessionId\":\"" + session +
     "\",\"nonce\":\"" + nonce + "\",\"pid\":" + std::to_string(GetCurrentProcessId());
   const std::string fontIdentity = ",\"fontProtocol\":1,\"fontId\":\"" + std::string(fontPath.empty()?"original":"noto-sans-cjk-sc") + "\"";
-  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"goldWriteProtocol\":1,\"inventoryWriteProtocol\":1,\"runtimeProtocol\":1,\"textProtocol\":1,\"capabilities\":[]" + fontIdentity + "}")) {
+  if (!sendFrame(pipe, "{" + base + ",\"type\":\"hello\",\"databaseProtocol\":1,\"numericReadProtocol\":1,\"goldWriteProtocol\":1,\"inventoryWriteProtocol\":1,\"runtimeProtocol\":1,\"textProtocol\":1,\"capabilities\":[]" + fontIdentity + "}")) {
     CloseHandle(pipe); return 3;
   }
   wolf::DatabaseReader reader;
@@ -92,6 +92,9 @@ static DWORD WINAPI bootstrap(void*) {
         } else if(op=="page"){
           if(!(input>>kind>>t>>start>>limit>>fs>>fl)||input>>extra||kind>2||t>=4096||start>100000||limit>10||fs>4096||fl>16)throw std::runtime_error("invalid_request");
           payload=reader.page(static_cast<uint32_t>(kind),static_cast<uint32_t>(t),static_cast<uint32_t>(start),static_cast<uint32_t>(limit),static_cast<uint32_t>(fs),static_cast<uint32_t>(fl));
+        }else if(op=="numberpage"){
+          if(!(input>>kind>>t>>start>>limit>>fs)||input>>extra||kind>2||t>=4096||start>100000||limit>100||fs>=4096)throw std::runtime_error("invalid_request");
+          payload=reader.page(static_cast<uint32_t>(kind),static_cast<uint32_t>(t),static_cast<uint32_t>(start),static_cast<uint32_t>(limit),static_cast<uint32_t>(fs),1,true);
         }else if(op=="goldwrite"||op=="inventorywrite"){
           int64_t expected=0,value=0;
           if(!(input>>kind>>t>>start>>fs>>expected>>value)||input>>extra||kind>2||t>=4096||start>=100000||fs>=4096||
